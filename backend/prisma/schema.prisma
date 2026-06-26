@@ -6,8 +6,38 @@
 generator client {
   provider = "prisma-client"
   output   = "../generated/prisma"
+  moduleFormat  = "cjs"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+model User {
+ id String @id @default(uuid())
+ email String @unique
+ passwordHash String @map("password_hash")
+ createdAt DateTime @default(now())
+ habits Habit[]
+ @@map("users")
+}
+model Habit {
+ id String @id @default(uuid())
+ userId String
+ name String
+ color String?
+ createdAt DateTime @default(now())
+ archivedAt DateTime? 
+ user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+ entries HabitEntry[]
+ @@map("habits")
+}
+model HabitEntry {
+ id String @id @default(uuid())
+ habitId String
+ date DateTime @db.Date
+ createdAt DateTime @default(now())
+ habit Habit @relation(fields: [habitId], references: [id], onDelete: Cascade)
+ @@unique([habitId, date])
+ @@map("habit_entries")
 }
