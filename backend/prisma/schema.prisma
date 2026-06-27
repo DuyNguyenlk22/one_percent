@@ -16,7 +16,7 @@ datasource db {
 model User {
  id String @id @default(uuid())
  email String @unique
- passwordHash String @map("password_hash")
+ passwordHash String
  createdAt DateTime @default(now())
  habits Habit[]
  @@map("users")
