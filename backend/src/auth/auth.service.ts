@@ -1,0 +1,97 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { PrismaService } from 'src/prisma.service';
+import { LoginResult, SafeUser } from './types/auth.types';
+import { JwtService } from '@nestjs/jwt';
+import { omit } from 'lodash';
+import * as bcrypt from 'bcrypt';
+import { ConfigService } from '@nestjs/config';
+
+@Injectable()
+export class AuthService {
+  constructor(
+    private prisma: PrismaService,
+    private jwtService: JwtService,
+    private configService: ConfigService,
+  ) {}
+
+  async login(email: string, pwd: string): Promise<LoginResult> {
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`No user found for email: ${email}`);
+    }
+
+    const isPwdValid = await bcrypt.compare(pwd, user.passwordHash);
+
+    if (!isPwdValid) {
+      throw new UnauthorizedException('Invalid password');
+    }
+
+    return {
+      user: omit(user, ['passwordHash']),
+      accessToken: this.jwtService.sign({ userId: user.id }),
+    };
+  }
+
+  async register(email: string, pwd: string): Promise<LoginResult> {
+    const existedUser = await this.prisma.user.findUnique({
+      where: { email },
+    });
+    if (existedUser) {
+      throw new ConflictException('Email already exists');
+    }
+
+    const saltOrRounds = this.configService.get<number>('SALT_PWD');
+    const hash = await bcrypt.hash(pwd, Number(saltOrRounds));
+
+    const user = await this.prisma.user.create({
+      data: {
+        email,
+        passwordHash: hash,
+      },
+    });
+
+    const accessToken = await this.jwtService.signAsync({ id: user.id });
+
+    return {
+      user: omit(user, ['passwordHash']),
+      accessToken,
+    };
+  }
+
+  async validateUser(userId: string): Promise<any> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+    if (user) {
+      const { passwordHash, ...result } = user;
+      return result;
+    }
+    return null;
+  }
+
+  async getProfile(userId: string): Promise<SafeUser> {
+    const user = await this.prisma.user.findUnique({
+      where: {
+        id: userId,
+      },
+      omit: {
+        passwordHash: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User not found with ID: ${userId}`);
+    }
+
+    return user;
+  }
+}
