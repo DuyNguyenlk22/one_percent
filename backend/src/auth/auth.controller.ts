@@ -12,8 +12,11 @@ import { AuthService } from './auth.service';
 import { LoginAuthDto } from './dto/login-auth.dto';
 import { RegisterAuthDto } from './dto/register-auth.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { ApiBearerAuth, ApiCreatedResponse, ApiTags } from '@nestjs/swagger';
+import { AuthResponse } from './types/auth.types';
 
 @Controller('auth')
+@ApiTags('Auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
@@ -24,11 +27,13 @@ export class AuthController {
   }
 
   @Post('/register')
+  @ApiCreatedResponse({ type: AuthResponse })
   register(@Body() body: RegisterAuthDto) {
     return this.authService.register(body.email, body.password);
   }
 
   @Get('/me')
+  @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   async getProfile(@Request() req: { user: { id: string } }) {
     return this.authService.getProfile(req.user.id);

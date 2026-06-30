@@ -1,8 +1,12 @@
 import { User } from 'generated/prisma/client';
+import { ApiProperty } from '@nestjs/swagger';
 
 export type SafeUser = Omit<User, 'passwordHash'>;
 
-export type LoginResult = {
+export class AuthResponse {
+  @ApiProperty()
   accessToken: string;
+
+  @ApiProperty()
   user: SafeUser;
-};
+}

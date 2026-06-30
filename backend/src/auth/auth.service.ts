@@ -6,7 +6,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
-import { LoginResult, SafeUser } from './types/auth.types';
+import { AuthResponse, SafeUser } from './types/auth.types';
 import { JwtService } from '@nestjs/jwt';
 import { omit } from 'lodash';
 import * as bcrypt from 'bcrypt';
@@ -20,7 +20,7 @@ export class AuthService {
     private configService: ConfigService,
   ) {}
 
-  async login(email: string, pwd: string): Promise<LoginResult> {
+  async login(email: string, pwd: string): Promise<AuthResponse> {
     const user = await this.prisma.user.findUnique({
       where: { email },
     });
@@ -41,7 +41,7 @@ export class AuthService {
     };
   }
 
-  async register(email: string, pwd: string): Promise<LoginResult> {
+  async register(email: string, pwd: string): Promise<AuthResponse> {
     const existedUser = await this.prisma.user.findUnique({
       where: { email },
     });
