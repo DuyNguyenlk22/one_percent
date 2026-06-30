@@ -14,6 +14,7 @@ import { RegisterAuthDto } from './dto/register-auth.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { ApiBearerAuth, ApiCreatedResponse, ApiTags } from '@nestjs/swagger';
 import { AuthResponse } from './types/auth.types';
+import { CurrentUser } from 'src/common/decorators';
 
 @Controller('auth')
 @ApiTags('Auth')
@@ -35,7 +36,7 @@ export class AuthController {
   @Get('/me')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
-  async getProfile(@Request() req: { user: { id: string } }) {
-    return this.authService.getProfile(req.user.id);
+  async getProfile(@CurrentUser('id') userId: string) {
+    return this.authService.getProfile(userId);
   }
 }

@@ -7,8 +7,6 @@ import { ConfigService } from '@nestjs/config';
 import { JwtStrategy } from './jwt.strategy';
 import { PrismaService } from 'src/prisma.service';
 
-export const jwtSecret = process.env.JWT_SECRET || '';
-
 @Module({
   imports: [
     JwtModule.registerAsync({
