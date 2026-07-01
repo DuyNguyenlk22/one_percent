@@ -29,7 +29,7 @@ export class AuthController {
 
   @Post('/register')
   @ApiCreatedResponse({ type: AuthResponse })
-  register(@Body() body: RegisterAuthDto) {
+  async register(@Body() body: RegisterAuthDto) {
     return this.authService.register(body.email, body.password);
   }
 
