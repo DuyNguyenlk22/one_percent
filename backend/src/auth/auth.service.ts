@@ -9,15 +9,13 @@ import { PrismaService } from 'src/prisma.service';
 import { AuthResponse, SafeUser } from './types/auth.types';
 import { JwtService } from '@nestjs/jwt';
 import { omit } from 'lodash';
-import * as bcrypt from 'bcrypt';
-import { ConfigService } from '@nestjs/config';
+import { comparePassword, hashingPassword } from 'src/utils';
 
 @Injectable()
 export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
-    private configService: ConfigService,
   ) {}
 
   async login(email: string, pwd: string): Promise<AuthResponse> {
@@ -29,10 +27,10 @@ export class AuthService {
       throw new NotFoundException(`No user found for email: ${email}`);
     }
 
-    const isPwdValid = await bcrypt.compare(pwd, user.passwordHash);
+    const isPwdValid = await comparePassword(pwd, user.passwordHash);
 
     if (!isPwdValid) {
-      throw new UnauthorizedException('Invalid password');
+      throw new UnauthorizedException('Invalid credentials');
     }
 
     return {
@@ -49,8 +47,7 @@ export class AuthService {
       throw new ConflictException('Email already exists');
     }
 
-    const saltOrRounds = this.configService.get<number>('SALT_PWD');
-    const hash = await bcrypt.hash(pwd, Number(saltOrRounds));
+    const hash = await hashingPassword(pwd);
 
     const user = await this.prisma.user.create({
       data: {
