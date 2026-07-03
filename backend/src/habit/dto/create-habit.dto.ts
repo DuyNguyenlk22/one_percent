@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsHexColor, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreateHabitDto {
   @ApiProperty()
@@ -9,6 +9,6 @@ export class CreateHabitDto {
 
   @ApiProperty()
   @IsOptional()
-  @IsString()
+  @IsHexColor()
   color?: string;
 }

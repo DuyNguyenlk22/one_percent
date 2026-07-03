@@ -1,8 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateHabitDto } from './dto/create-habit.dto';
 import { PrismaService } from 'src/prisma.service';
-// import { UpdateHabitDto } from './dto/update-habit.dto';
-
+import { GetHabitsDto } from './dto/get-habit.dto';
+import { UpdateHabitDto } from './dto/update-habit.dto';
+import { HabitUpdateInput } from 'generated/prisma/models';
 @Injectable()
 export class HabitService {
   constructor(private prisma: PrismaService) {}
@@ -15,19 +16,38 @@ export class HabitService {
     });
   }
 
-  // findAll() {
-  //   return `This action returns all habit`;
-  // }
+  async getHabits(userId: string, date?: GetHabitsDto) {
+    if (!date) {
+      return await this.prisma.habit.findMany({
+        where: {
+          userId,
+          archivedAt: null,
+        },
+      });
+    }
+  }
 
-  // findOne(id: number) {
-  //   return `This action returns a #${id} habit`;
-  // }
+  async updateHabits(id: string, userId: string, habitDto: UpdateHabitDto) {
+    const habit = await this.prisma.habit.findFirst({
+      where: {
+        id,
+        userId,
+      },
+    });
 
-  // update(id: number, updateHabitDto: UpdateHabitDto) {
-  //   return `This action updates a #${id} habit`;
-  // }
+    if (!habit) {
+      throw new NotFoundException('Habit not found!');
+    }
 
-  // remove(id: number) {
-  //   return `This action removes a #${id} habit`;
-  // }
+    const data: HabitUpdateInput = {
+      ...habit,
+      ...habitDto,
+      archivedAt: habitDto.archived ? new Date() : null,
+    };
+
+    return await this.prisma.habit.update({
+      where: { id },
+      data,
+    });
+  }
 }

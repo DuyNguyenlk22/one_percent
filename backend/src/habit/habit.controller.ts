@@ -1,9 +1,26 @@
-import { Controller, Post, Body, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  UseGuards,
+  Get,
+  Query,
+  Patch,
+  Param,
+  ParseUUIDPipe,
+} from '@nestjs/common';
 import { HabitService } from './habit.service';
 import { CreateHabitDto } from './dto/create-habit.dto';
-import { ApiBearerAuth, ApiCreatedResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiParam,
+  ApiTags,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { CurrentUser } from 'src/common/decorators';
+import { GetHabitsDto } from './dto/get-habit.dto';
+import { UpdateHabitDto } from './dto/update-habit.dto';
 
 @Controller('habits')
 @ApiTags('Habit')
@@ -21,18 +38,25 @@ export class HabitController {
     return this.habitService.addHabit(userId, dto);
   }
 
-  // @Get()
-  // findAll() {
-  //   return this.habitService.findAll();
-  // }
+  @Get()
+  async getHabits(
+    @CurrentUser('id') userId: string,
+    @Query('date') date?: GetHabitsDto,
+  ) {
+    return await this.habitService.getHabits(userId, date);
+  }
 
-  // @Patch(':id')
-  // update(@Param('id') id: string, @Body() updateHabitDto: UpdateHabitDto) {
-  //   return this.habitService.update(+id, updateHabitDto);
-  // }
-
-  // @Delete(':id')
-  // remove(@Param('id') id: string) {
-  //   return this.habitService.remove(+id);
-  // }
+  @Patch(':id')
+  @ApiParam({
+    name: 'id',
+    description: 'Please provide habit id',
+    required: true,
+  })
+  updateHabit(
+    @Body() habitDto: UpdateHabitDto,
+    @Param('id', new ParseUUIDPipe()) paramId: string,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.habitService.updateHabits(paramId, userId, habitDto);
+  }
 }
