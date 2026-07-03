@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateHabitDto } from './dto/create-habit.dto';
 import { PrismaService } from 'src/prisma.service';
 import { GetHabitsDto } from './dto/get-habit.dto';
@@ -49,5 +54,34 @@ export class HabitService {
       where: { id },
       data,
     });
+  }
+
+  async deleteHabit(id: string, userId: string) {
+    if (!id) throw new BadRequestException();
+
+    const habit = await this.prisma.habit.findFirst({
+      where: {
+        id,
+        userId,
+      },
+    });
+
+    if (!habit) {
+      throw new NotFoundException('Habit not found!');
+    }
+
+    const deletedHabit = await this.prisma.habit.delete({
+      where: {
+        id,
+        userId,
+      },
+    });
+
+    if (deletedHabit) {
+      return {
+        code: 200,
+        message: `Deleted successfully the habit with id: ${id}`,
+      };
+    } else throw new InternalServerErrorException();
   }
 }

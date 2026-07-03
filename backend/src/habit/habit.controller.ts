@@ -8,6 +8,7 @@ import {
   Patch,
   Param,
   ParseUUIDPipe,
+  Delete,
 } from '@nestjs/common';
 import { HabitService } from './habit.service';
 import { CreateHabitDto } from './dto/create-habit.dto';
@@ -52,11 +53,24 @@ export class HabitController {
     description: 'Please provide habit id',
     required: true,
   })
-  updateHabit(
+  async updateHabit(
     @Body() habitDto: UpdateHabitDto,
     @Param('id', new ParseUUIDPipe()) paramId: string,
     @CurrentUser('id') userId: string,
   ) {
-    return this.habitService.updateHabits(paramId, userId, habitDto);
+    return await this.habitService.updateHabits(paramId, userId, habitDto);
+  }
+
+  @Delete(':id')
+  @ApiParam({
+    name: 'id',
+    description: 'Please provide habit id',
+    required: true,
+  })
+  async deleteHabit(
+    @Param('id', new ParseUUIDPipe()) paramId: string,
+    @CurrentUser('id') userId: string,
+  ) {
+    return await this.habitService.deleteHabit(paramId, userId);
   }
 }
