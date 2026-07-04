@@ -6,7 +6,6 @@ import {
   HttpStatus,
   Get,
   UseGuards,
-  Request,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginAuthDto } from './dto/login-auth.dto';

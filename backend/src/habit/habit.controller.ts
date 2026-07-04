@@ -35,8 +35,11 @@ export class HabitController {
     description: 'The record has been successfully created.',
     type: CreateHabitDto,
   })
-  addHabit(@CurrentUser('id') userId: string, @Body() dto: CreateHabitDto) {
-    return this.habitService.addHabit(userId, dto);
+  async addHabit(
+    @CurrentUser('id') userId: string,
+    @Body() dto: CreateHabitDto,
+  ) {
+    return await this.habitService.addHabit(userId, dto);
   }
 
   @Get()
