@@ -1,9 +1,13 @@
 import {
   Body,
   Controller,
+  Delete,
+  Get,
   Param,
+  ParseDatePipe,
   ParseUUIDPipe,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { EntriesService } from './entries.service';
@@ -11,6 +15,7 @@ import { ApiBearerAuth, ApiCreatedResponse, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { CreateEntryDto } from './dto/create-entry';
 import { CurrentUser } from 'src/common/decorators';
+import { GetHabitEntriesDto } from 'src/entries/dto/query.dto';
 
 @Controller('habits')
 @ApiTags('Habit-entries')
@@ -30,5 +35,27 @@ export class EntriesController {
     @Body() dto: CreateEntryDto,
   ) {
     return this.entriesService.checkOff(userId, habitId, dto);
+  }
+
+  @Get(':id/entries')
+  async getEntries(
+    @Param('id', new ParseUUIDPipe()) habitId: string,
+    @CurrentUser('id') userId: string,
+    @Query() query: GetHabitEntriesDto,
+  ) {
+    return await this.entriesService.getEntries(
+      userId,
+      habitId,
+      query.from,
+      query.to,
+    );
+  }
+
+  @Delete(':id/entries/:date')
+  deleteEntry(
+    @Param('id', new ParseUUIDPipe()) entryId: string,
+    @Param('date', new ParseDatePipe()) date: string,
+  ) {
+    return this.entriesService.deleteEntry(entryId, date);
   }
 }
