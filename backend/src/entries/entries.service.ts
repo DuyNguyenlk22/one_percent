@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 import { CreateEntryDto } from './dto/create-entry';
 import { standardizeDate, TODAY } from 'src/utils/dayjs';
@@ -82,11 +86,20 @@ export class EntriesService {
       throw new NotFoundException('Habit entry not found!');
     }
 
-    return await this.prisma.habitEntry.delete({
+    const deletedEntry = await this.prisma.habitEntry.delete({
       where: {
         id: entryId,
         date,
       },
     });
+
+    if (!deletedEntry) {
+      throw new InternalServerErrorException();
+    } else {
+      return {
+        code: 200,
+        message: `Deleted successfully`,
+      };
+    }
   }
 }

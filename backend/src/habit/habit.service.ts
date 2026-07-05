@@ -9,6 +9,9 @@ import { PrismaService } from 'src/prisma.service';
 import { GetHabitsDto } from './dto/get-habit.dto';
 import { UpdateHabitDto } from './dto/update-habit.dto';
 import { HabitUpdateInput } from 'generated/prisma/models';
+import dayjs from 'dayjs';
+import { computeCurrentStreak } from 'src/utils/streak';
+import { omit } from 'lodash';
 @Injectable()
 export class HabitService {
   constructor(private prisma: PrismaService) {}
@@ -21,8 +24,8 @@ export class HabitService {
     });
   }
 
-  async getHabits(userId: string, date?: GetHabitsDto) {
-    if (!date) {
+  async getHabits(userId: string, dateDto?: GetHabitsDto) {
+    if (!dateDto) {
       return await this.prisma.habit.findMany({
         where: {
           userId,
@@ -30,6 +33,32 @@ export class HabitService {
         },
       });
     }
+
+    const habits = await this.prisma.habit.findMany({
+      where: {
+        userId,
+        archivedAt: null,
+      },
+      include: {
+        entries: {
+          orderBy: {
+            date: 'desc',
+          },
+        },
+      },
+    });
+    const target = dayjs(dateDto.date);
+
+    return habits.map((habit) => ({
+      ...omit(habit, 'entries'),
+      doneToday: habit.entries.some((entry) =>
+        dayjs(entry.date).isSame(target, 'day'),
+      ),
+      currentStreak: computeCurrentStreak(
+        habit.entries.map((entry) => entry.date),
+        target,
+      ),
+    }));
   }
 
   async updateHabits(id: string, userId: string, habitDto: UpdateHabitDto) {
