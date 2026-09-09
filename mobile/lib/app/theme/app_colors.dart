@@ -33,6 +33,15 @@ abstract final class AppColors {
   static const Color onSurface = Color(0xFF1B1C19); // Deep Charcoal Ink
   static const Color onSurfaceVariant = Color(0xFF434844); // Secondary labels
 
+  // Tonal Fixed Tokens (from Stitch)
+  static const Color primaryFixed = Color(0xFFD2E8D8);
+  static const Color onPrimaryFixed = Color(0xFF0D1F15);
+  static const Color secondaryFixed = Color(0xFFFFDAD9);
+  static const Color onSecondaryFixed = Color(0xFF2F1314);
+  static const Color tertiaryFixed = Color(0xFFD1E6F2);
+  static const Color onTertiaryFixed = Color(0xFF0A1E27);
+  static const Color surfaceVariant = Color(0xFFE4E2DD);
+
   // Borders & Dividers
   static const Color outline = Color(0xFF737873);
   static const Color outlineVariant = Color(0xFFC3C8C2); // 1px subtle divider

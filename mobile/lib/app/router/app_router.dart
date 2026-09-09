@@ -7,7 +7,15 @@ import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/auth/presentation/providers/auth_provider.dart';
 import '../../core/widgets/app_loading.dart';
+import '../shell/main_shell_scaffold.dart';
+import '../../features/habits/presentation/pages/today_page.dart';
+import '../../features/habits/presentation/pages/routines_page.dart';
+import '../../features/habits/presentation/pages/add_habit_page.dart';
+import '../../features/insights/presentation/pages/insights_page.dart';
+import '../../features/profile/presentation/pages/profile_page.dart';
 import 'route_names.dart';
+
+final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
 /// The app's GoRouter, rebuilt when auth state changes.
 ///
@@ -28,6 +36,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   ref.onDispose(notifier.dispose);
 
   return GoRouter(
+    navigatorKey: _rootNavigatorKey,
     initialLocation: RouteNames.splashPath,
     debugLogDiagnostics: false,
     refreshListenable: notifier,
@@ -73,34 +82,62 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           email: state.uri.queryParameters['email'] ?? '',
         ),
       ),
-      GoRoute(
-        path: RouteNames.todayPath,
-        name: RouteNames.today,
-        builder: (context, state) => const _PlaceholderPage(title: 'Today'),
-      ),
-      GoRoute(
-        path: RouteNames.habitsPath,
-        name: RouteNames.habits,
-        builder: (context, state) => const _PlaceholderPage(title: 'Routines'),
-        routes: [
-          GoRoute(
-            path: RouteNames.habitDetailPath,
-            name: RouteNames.habitDetail,
-            builder: (context, state) => _PlaceholderPage(
-              title: 'Habit ${state.pathParameters['habitId']}',
-            ),
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) =>
+            MainShellScaffold(navigationShell: navigationShell),
+        branches: [
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: RouteNames.todayPath,
+                name: RouteNames.today,
+                builder: (context, state) => const TodayPage(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: RouteNames.habitsPath,
+                name: RouteNames.habits,
+                builder: (context, state) => const RoutinesPage(),
+                routes: [
+                  GoRoute(
+                    path: RouteNames.addHabitPath,
+                    name: RouteNames.addHabit,
+                    parentNavigatorKey: _rootNavigatorKey,
+                    builder: (context, state) => const AddHabitPage(),
+                  ),
+                  GoRoute(
+                    path: RouteNames.habitDetailPath,
+                    name: RouteNames.habitDetail,
+                    builder: (context, state) => _PlaceholderPage(
+                      title: 'Habit ${state.pathParameters['habitId']}',
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: RouteNames.insightsPath,
+                name: RouteNames.insights,
+                builder: (context, state) => const InsightsPage(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: RouteNames.profilePath,
+                name: RouteNames.profile,
+                builder: (context, state) => const ProfilePage(),
+              ),
+            ],
           ),
         ],
-      ),
-      GoRoute(
-        path: RouteNames.insightsPath,
-        name: RouteNames.insights,
-        builder: (context, state) => const _PlaceholderPage(title: 'Insights'),
-      ),
-      GoRoute(
-        path: RouteNames.profilePath,
-        name: RouteNames.profile,
-        builder: (context, state) => const _PlaceholderPage(title: 'Profile'),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(

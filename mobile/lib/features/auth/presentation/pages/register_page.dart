@@ -115,7 +115,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.containerMargin, // 24px
-              vertical: 24.0,
+              vertical: 12.0,
             ),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 384), // max-w-sm
@@ -127,12 +127,12 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      const SizedBox(height: AppSpacing.sectionGap), // 40px
+                      const SizedBox(height: 12),
 
                       // 1. Header with Bloom Logo
                       Container(
-                        width: 80,
-                        height: 80,
+                        width: 72,
+                        height: 72,
                         decoration: BoxDecoration(
                           color: AppColors.surfaceContainerLowest, // #FFFFFF
                           borderRadius: AppSpacing.borderRadiusCard, // 24px
@@ -141,20 +141,20 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
                         clipBehavior: Clip.antiAlias,
                         child: Image.asset(
                           AppAssets.bloomLogo,
-                          width: 80,
-                          height: 80,
+                          width: 72,
+                          height: 72,
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) =>
                               const Center(
                             child: Icon(
                               Icons.spa_rounded,
-                              size: 40,
+                              size: 36,
                               color: AppColors.primary, // Sage Green fallback
                             ),
                           ),
                         ),
                       ),
-                      const SizedBox(height: AppSpacing.stackGap), // 16px
+                      const SizedBox(height: 12),
 
                       // 2. Headlines
                       Text(
@@ -164,7 +164,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
                         ),
                         textAlign: TextAlign.center,
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 6),
                       ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 280),
                         child: Text(
@@ -175,7 +175,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
                           textAlign: TextAlign.center,
                         ),
                       ),
-                      const SizedBox(height: AppSpacing.sectionGap), // 40px
+                      const SizedBox(height: 20),
 
                       // 3. Registration Form
                       Form(
@@ -189,7 +189,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
                               controller: _nameController,
                               keyboardType: TextInputType.name,
                             ),
-                            const SizedBox(height: AppSpacing.stackGap), // 16px
+                            const SizedBox(height: 12),
 
                             // Email Address Input
                             AppTextField(
@@ -207,7 +207,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
                                 return null;
                               },
                             ),
-                            const SizedBox(height: AppSpacing.stackGap), // 16px
+                            const SizedBox(height: 12),
 
                             // Password Input
                             AppTextField(
@@ -230,7 +230,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
                           ],
                         ),
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 20),
 
                       // 4. Submit Button (Create Account)
                       GestureDetector(
@@ -283,13 +283,13 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
                           ),
                         ),
                       ),
-                      const SizedBox(height: AppSpacing.sectionGap), // 40px
+                      const SizedBox(height: 16),
 
                       // 5. Footer (Already have an account? Sign In)
                       GestureDetector(
                         onTap: _navigateToLogin,
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8.0),
+                          padding: const EdgeInsets.symmetric(vertical: 6.0),
                           child: Text.rich(
                             TextSpan(
                               text: 'Already have an account? ',
@@ -309,7 +309,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
                           ),
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 8),
                     ],
                   ),
                 ),
