@@ -6,7 +6,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
 
-/// App shell housing the primary tabs (Today, Routines, Insights, Profile)
+/// App shell housing the primary tabs (Today, Habits, Insights, Profile)
 /// with a floating frosted-glass bottom navigation bar.
 class MainShellScaffold extends StatelessWidget {
   const MainShellScaffold({
@@ -101,9 +101,9 @@ class _FloatingBottomNavBar extends StatelessWidget {
               _NavItem(
                 index: 1,
                 currentIndex: currentIndex,
-                icon: Icons.format_list_bulleted_rounded,
+                icon: Icons.spa_outlined,
                 activeIcon: Icons.format_list_bulleted_rounded,
-                label: 'Routines',
+                label: 'Habits',
                 onTap: onTap,
               ),
               _NavItem(

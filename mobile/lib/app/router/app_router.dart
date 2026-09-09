@@ -9,7 +9,7 @@ import '../../features/auth/presentation/providers/auth_provider.dart';
 import '../../core/widgets/app_loading.dart';
 import '../shell/main_shell_scaffold.dart';
 import '../../features/habits/presentation/pages/today_page.dart';
-import '../../features/habits/presentation/pages/routines_page.dart';
+import '../../features/habits/presentation/pages/my_habits_page.dart';
 import '../../features/habits/presentation/pages/add_habit_page.dart';
 import '../../features/insights/presentation/pages/insights_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
@@ -100,7 +100,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: RouteNames.habitsPath,
                 name: RouteNames.habits,
-                builder: (context, state) => const RoutinesPage(),
+                builder: (context, state) => const MyHabitsPage(),
                 routes: [
                   GoRoute(
                     path: RouteNames.addHabitPath,
