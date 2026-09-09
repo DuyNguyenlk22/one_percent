@@ -65,10 +65,9 @@ class _TodayPageState extends ConsumerState<TodayPage> {
     final topStreak = ref.watch(topStreakProvider);
 
     final user = ref.watch(authNotifierProvider).user;
-    final userName = user?.email.split('@').first ?? 'Sarah';
-    final capitalizedName = userName.isNotEmpty
-        ? '${userName[0].toUpperCase()}${userName.substring(1)}'
-        : 'Sarah';
+    // No invented name: until the profile loads there is simply no name to
+    // greet, and the greeting reads fine without one.
+    final displayName = user?.displayName ?? '';
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -128,7 +127,7 @@ class _TodayPageState extends ConsumerState<TodayPage> {
                         ),
                         child: Center(
                           child: Text(
-                            capitalizedName[0],
+                            displayName.isEmpty ? '\u{1F331}' : displayName[0],
                             style: AppTypography.labelMedium.copyWith(
                               color: AppColors.onPrimaryFixed,
                               fontWeight: FontWeight.w700,
@@ -153,7 +152,9 @@ class _TodayPageState extends ConsumerState<TodayPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Good morning, $capitalizedName.',
+                      displayName.isEmpty
+                          ? 'Good morning.'
+                          : 'Good morning, $displayName.',
                       style: AppTypography.headlineLargeMobile.copyWith(
                         color: AppColors.onSurface,
                       ),

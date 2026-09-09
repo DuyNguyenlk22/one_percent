@@ -78,10 +78,7 @@ class ProfilePage extends ConsumerWidget {
     // a spinner makes the whole page feel like it is loading.
     final summary =
         ref.watch(insightsProvider).value ?? InsightsSummary.empty;
-    final userName = user?.email.split('@').first ?? 'Sarah Jenkins';
-    final capitalizedName = userName.isNotEmpty
-        ? '${userName[0].toUpperCase()}${userName.substring(1)}'
-        : 'Sarah Jenkins';
+    final displayName = user?.displayName ?? '';
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -114,7 +111,7 @@ class ProfilePage extends ConsumerWidget {
                       ),
                       child: Center(
                         child: Text(
-                          capitalizedName.isNotEmpty ? capitalizedName[0] : 'S',
+                          displayName.isEmpty ? '\u{1F331}' : displayName[0],
                           style: AppTypography.display.copyWith(
                             color: AppColors.primary,
                             fontSize: 42,
@@ -153,7 +150,7 @@ class ProfilePage extends ConsumerWidget {
 
               // User Name & Tagline
               Text(
-                capitalizedName,
+                displayName.isEmpty ? 'Your profile' : displayName,
                 style: AppTypography.headlineMedium.copyWith(
                   color: AppColors.onSurface,
                   fontWeight: FontWeight.w700,
