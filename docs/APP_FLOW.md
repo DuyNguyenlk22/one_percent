@@ -105,24 +105,24 @@ sequenceDiagram
 
     M->>M: SharedPreferences.getInstance()
     M->>App: ProviderScope(override: sharedPreferencesProvider)
-    App->>R: initialLocation "/" (splash)
-    R-->>App: status == unknown → hold on splash
+    App->>R: initialLocation "/" (welcome)
+    R-->>App: status == unknown → hold on welcome
     App->>N: build() → Future.microtask(restoreSession)
     N->>Repo: hasSession()
     Repo->>S: readAccessToken()
     alt no token
         S-->>N: null
         N->>N: status = unauthenticated
-        R-->>App: redirect → /login
+        R-->>App: stay on / — WelcomePage offers Register / Login
     else token present
         N->>API: GET /auth/me (Bearer)
         alt 200
             API-->>N: user → status = authenticated
-            R-->>App: redirect → /today
+            App->>App: WelcomePage holds 1.2s, then goNamed(today)
         else 401
             Repo->>S: clearSession()
             N->>N: status = unauthenticated
-            R-->>App: redirect → /login
+            R-->>App: stay on / — WelcomePage offers Register / Login
         end
     end
 ```
@@ -135,11 +135,18 @@ Redirect rules:
 
 | Status | Location | Result |
 |---|---|---|
-| `unknown` | anything but `/` | → `/` (splash) |
-| `unauthenticated` | public path (`/login`, `/register`, `/forgot-password`) | stay |
-| `unauthenticated` | anything else, incl. `/` | → `/login` |
-| `authenticated` | a public path | → `/today` |
+| `unknown` | anything but `/` | → `/` (welcome) |
+| `unauthenticated` | public path (`/`, `/login`, `/register`, `/forgot-password`) | stay |
+| `unauthenticated` | anything else | → `/login` |
+| `authenticated` | `/` (welcome) | stay — the page moves the user on itself |
+| `authenticated` | any other public path | → `/today` |
 | `authenticated` | private path | stay |
+
+`/` is the one route every launch passes through, signed in or out. The
+redirect deliberately does **not** bounce an authenticated user off it;
+`WelcomePage` waits out a 1.2s brand beat and then calls
+`goNamed(today)` itself, which is what keeps the screen from flashing
+past a returning user.
 
 ---
 
@@ -147,7 +154,7 @@ Redirect rules:
 
 ```mermaid
 flowchart TD
-    SPLASH["/ — Splash<br/>AppLoading"]
+    WELCOME["/ — WelcomePage<br/>brand, pillars, both ways in"]
 
     subgraph Public["Public (signed out)"]
         LOGIN["/login"]
@@ -165,8 +172,9 @@ flowchart TD
     ADD["/habits/add — AddHabitPage<br/>(root navigator, full-screen over the nav bar)"]
     DETAIL["/habits/:habitId<br/>_PlaceholderPage"]
 
-    SPLASH -->|unauthenticated| LOGIN
-    SPLASH -->|authenticated| TODAY
+    WELCOME -->|"tap · Begin Your Journey"| REG
+    WELCOME -->|"tap · Sign In"| LOGIN
+    WELCOME -->|"authenticated, after 1.2s"| TODAY
     LOGIN -->|"push · Sign up"| REG
     LOGIN -->|"push · Forgot password"| FORGOT
     REG -->|"pop / goNamed"| LOGIN
@@ -431,6 +439,7 @@ the unbound `date` query DTO, the mis-keyed entry delete, the module-load
 | App entry / bootstrap | [mobile/lib/main.dart](../mobile/lib/main.dart) |
 | Routing + redirects | [mobile/lib/app/router/app_router.dart](../mobile/lib/app/router/app_router.dart) |
 | Route constants | [mobile/lib/app/router/route_names.dart](../mobile/lib/app/router/route_names.dart) |
+| First screen every launch | [mobile/lib/features/onboarding/presentation/pages/welcome_page.dart](../mobile/lib/features/onboarding/presentation/pages/welcome_page.dart) |
 | Habit state + optimistic toggle | [mobile/lib/features/habits/presentation/providers/daily_habits_provider.dart](../mobile/lib/features/habits/presentation/providers/daily_habits_provider.dart) |
 | History maths (pure) | [mobile/lib/features/insights/domain/insights_calculator.dart](../mobile/lib/features/insights/domain/insights_calculator.dart) |
 | Tab shell / bottom nav | [mobile/lib/app/shell/main_shell_scaffold.dart](../mobile/lib/app/shell/main_shell_scaffold.dart) |
