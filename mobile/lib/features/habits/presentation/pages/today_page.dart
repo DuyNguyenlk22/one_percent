@@ -6,7 +6,12 @@ import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_typography.dart';
+import '../../../../core/errors/failures.dart';
+import '../../../../core/widgets/app_error.dart';
+import '../../../../core/widgets/app_loading.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
+import '../providers/daily_habits_provider.dart';
+import '../widgets/habit_check_card.dart';
 
 /// Stitch Screen: Today (Interactive Quotes)
 /// Screen ID: 7657660f0ff14fe0a33d3578d71f8d4f
@@ -30,38 +35,35 @@ class _TodayPageState extends ConsumerState<TodayPage> {
   int _quoteIndex = 0;
   bool _showMotivation = true;
 
-  // Interactive local states for demo habits
-  double _waterDrankLiters = 1.5;
-  final double _waterGoalLiters = 2.0;
-
-  bool _exerciseCompleted = false;
-  bool _meditateCompleted = true;
-  bool _readCompleted = false;
-
-  int get _totalHabits => 4;
-  int get _completedCount {
-    int count = 0;
-    if (_waterDrankLiters >= _waterGoalLiters) count++;
-    if (_exerciseCompleted) count++;
-    if (_meditateCompleted) count++;
-    if (_readCompleted) count++;
-    return count;
-  }
-
   void _cycleQuote() {
     setState(() {
       _quoteIndex = (_quoteIndex + 1) % _quotes.length;
     });
   }
 
-  void _addWater() {
-    setState(() {
-      _waterDrankLiters = (_waterDrankLiters + 0.25).clamp(0.0, 3.0);
-    });
+  /// Flips a habit's check-off, surfacing the message if the write is rejected.
+  /// The provider has already rolled the list back by the time this returns.
+  Future<void> _toggle(String habitId) async {
+    final failure =
+        await ref.read(dailyHabitsProvider.notifier).toggle(habitId);
+    if (failure == null || !mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(failure.message),
+        backgroundColor: AppColors.error,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final habitsAsync = ref.watch(dailyHabitsProvider);
+    final total = habitsAsync.value?.length ?? 0;
+    final completed = ref.watch(todayCompletedCountProvider);
+    final topStreak = ref.watch(topStreakProvider);
+
     final user = ref.watch(authNotifierProvider).user;
     final userName = user?.email.split('@').first ?? 'Sarah';
     final capitalizedName = userName.isNotEmpty
@@ -198,14 +200,14 @@ class _TodayPageState extends ConsumerState<TodayPage> {
                                 alignment: Alignment.center,
                                 children: [
                                   CircularProgressIndicator(
-                                    value: _completedCount / _totalHabits,
+                                    value: total == 0 ? 0 : completed / total,
                                     strokeWidth: 7,
                                     backgroundColor: AppColors.surfaceVariant,
                                     color: AppColors.primary,
                                     strokeCap: StrokeCap.round,
                                   ),
                                   Text(
-                                    '$_completedCount/$_totalHabits',
+                                    '$completed/$total',
                                     style: AppTypography.headlineSmall.copyWith(
                                       fontWeight: FontWeight.w700,
                                       color: AppColors.onSurface,
@@ -248,7 +250,7 @@ class _TodayPageState extends ConsumerState<TodayPage> {
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              '12',
+                              '$topStreak',
                               style: AppTypography.headlineLarge.copyWith(
                                 color: AppColors.onPrimaryContainer,
                                 fontWeight: FontWeight.w700,
@@ -391,75 +393,50 @@ class _TodayPageState extends ConsumerState<TodayPage> {
               ),
             ),
 
-            // Daily Habits Items
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.containerMargin,
-              ),
-              sliver: SliverList(
-                delegate: SliverChildListDelegate(
-                  [
-                    // Habit 1: Drink water (Quantity Counter)
-                    _WaterHabitCard(
-                      drankLiters: _waterDrankLiters,
-                      goalLiters: _waterGoalLiters,
-                      onAdd: _addWater,
+            // Daily habits, from GET /habits?date=today
+            switch (habitsAsync) {
+              AsyncError(:final error) => SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 32),
+                    child: AppError(
+                      message: error is Failure
+                          ? error.message
+                          : 'Could not load your habits.',
+                      onRetry: () =>
+                          ref.read(dailyHabitsProvider.notifier).refresh(),
                     ),
-                    const SizedBox(height: AppSpacing.stackGap),
-
-                    // Habit 2: Morning exercise
-                    _ToggleHabitCard(
-                      title: 'Morning exercise',
-                      subtitle: '20 mins',
-                      icon: Icons.directions_run_rounded,
-                      iconBg: AppColors.primaryFixed,
-                      iconColor: AppColors.onPrimaryFixed,
-                      isCompleted: _exerciseCompleted,
-                      onToggle: () {
-                        setState(() {
-                          _exerciseCompleted = !_exerciseCompleted;
-                        });
-                      },
-                    ),
-                    const SizedBox(height: AppSpacing.stackGap),
-
-                    // Habit 3: Meditate (Completed state with sage banner)
-                    _ToggleHabitCard(
-                      title: 'Meditate',
-                      subtitle: '10 mins',
-                      icon: Icons.self_improvement_rounded,
-                      iconBg: AppColors.secondaryContainer,
-                      iconColor: AppColors.onSecondaryContainer,
-                      isCompleted: _meditateCompleted,
-                      onToggle: () {
-                        setState(() {
-                          _meditateCompleted = !_meditateCompleted;
-                        });
-                      },
-                    ),
-                    const SizedBox(height: AppSpacing.stackGap),
-
-                    // Habit 4: Read a book
-                    _ToggleHabitCard(
-                      title: 'Read a book',
-                      subtitle: '15 mins',
-                      icon: Icons.menu_book_rounded,
-                      iconBg: AppColors.tertiaryFixed,
-                      iconColor: AppColors.onTertiaryFixed,
-                      isCompleted: _readCompleted,
-                      onToggle: () {
-                        setState(() {
-                          _readCompleted = !_readCompleted;
-                        });
-                      },
-                    ),
-
-                    // Space for floating bottom navigation dock
-                    const SizedBox(height: 110),
-                  ],
+                  ),
                 ),
-              ),
-            ),
+              AsyncData(:final value) when value.isEmpty =>
+                const SliverToBoxAdapter(child: _EmptyHabits()),
+              AsyncData(:final value) => SliverPadding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.containerMargin,
+                  ),
+                  sliver: SliverList.separated(
+                    itemCount: value.length + 1,
+                    separatorBuilder: (_, _) =>
+                        const SizedBox(height: AppSpacing.stackGap),
+                    itemBuilder: (context, index) {
+                      // Trailing spacer clears the floating nav dock.
+                      if (index == value.length) {
+                        return const SizedBox(height: 110);
+                      }
+                      final habit = value[index];
+                      return HabitCheckCard(
+                        habit: habit,
+                        onToggle: () => _toggle(habit.id),
+                      );
+                    },
+                  ),
+                ),
+              _ => const SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 48),
+                    child: AppLoading(),
+                  ),
+                ),
+            },
           ],
         ),
       ),
@@ -479,203 +456,31 @@ class _TodayPageState extends ConsumerState<TodayPage> {
   }
 }
 
-class _WaterHabitCard extends StatelessWidget {
-  const _WaterHabitCard({
-    required this.drankLiters,
-    required this.goalLiters,
-    required this.onAdd,
-  });
-
-  final double drankLiters;
-  final double goalLiters;
-  final VoidCallback onAdd;
+class _EmptyHabits extends StatelessWidget {
+  const _EmptyHabits();
 
   @override
   Widget build(BuildContext context) {
-    final progress = (drankLiters / goalLiters).clamp(0.0, 1.0);
-
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.cardPadding),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceContainer,
-        borderRadius: AppSpacing.borderRadiusCard,
-        boxShadow: AppSpacing.ambientShadow,
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.containerMargin,
+        vertical: 40,
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Drink enough water',
-                    style: AppTypography.headlineSmall.copyWith(
-                      color: AppColors.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${drankLiters.toStringAsFixed(1)}L / ${goalLiters.toStringAsFixed(1)}L Goal',
-                    style: AppTypography.bodyMedium.copyWith(
-                      color: AppColors.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-              Container(
-                width: 48,
-                height: 48,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.secondaryContainer,
-                ),
-                child: const Icon(
-                  Icons.water_drop_rounded,
-                  color: AppColors.onSecondaryContainer,
-                ),
-              ),
-            ],
+          const Icon(Icons.spa_outlined, size: 44, color: AppColors.primary),
+          const SizedBox(height: 12),
+          Text(
+            'No habits yet',
+            style:
+                AppTypography.headlineSmall.copyWith(color: AppColors.onSurface),
           ),
-          const SizedBox(height: 14),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 8,
-              backgroundColor: AppColors.surfaceVariant,
-              valueColor: const AlwaysStoppedAnimation(AppColors.secondary),
-            ),
-          ),
-          const SizedBox(height: 14),
-          SizedBox(
-            width: double.infinity,
-            height: 44,
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.secondaryContainer,
-                foregroundColor: AppColors.onSecondaryContainer,
-                elevation: 0,
-                shape: const StadiumBorder(),
-              ),
-              onPressed: onAdd,
-              icon: const Icon(Icons.add_rounded, size: 18),
-              label: Text(
-                'Add 250ml',
-                style: AppTypography.labelMedium.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ToggleHabitCard extends StatelessWidget {
-  const _ToggleHabitCard({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.iconBg,
-    required this.iconColor,
-    required this.isCompleted,
-    required this.onToggle,
-  });
-
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final Color iconBg;
-  final Color iconColor;
-  final bool isCompleted;
-  final VoidCallback onToggle;
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 250),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.cardPadding,
-        vertical: 16,
-      ),
-      decoration: BoxDecoration(
-        color: isCompleted ? AppColors.primaryContainer : AppColors.surfaceContainer,
-        borderRadius: AppSpacing.borderRadiusCard,
-        boxShadow: AppSpacing.ambientShadow,
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: isCompleted
-                  ? AppColors.onPrimaryContainer.withValues(alpha: 0.2)
-                  : iconBg,
-            ),
-            child: Icon(
-              icon,
-              color: isCompleted ? AppColors.onPrimaryContainer : iconColor,
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: AppTypography.bodyLarge.copyWith(
-                    color: isCompleted
-                        ? AppColors.onPrimaryContainer
-                        : AppColors.onSurface,
-                    fontWeight: FontWeight.w600,
-                    decoration: isCompleted ? TextDecoration.lineThrough : null,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: AppTypography.labelSmall.copyWith(
-                    color: isCompleted
-                        ? AppColors.onPrimaryContainer.withValues(alpha: 0.75)
-                        : AppColors.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          InkWell(
-            onTap: onToggle,
-            borderRadius: BorderRadius.circular(20),
-            child: Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isCompleted ? AppColors.onPrimaryContainer : Colors.transparent,
-                border: Border.all(
-                  color: isCompleted
-                      ? Colors.transparent
-                      : AppColors.outlineVariant,
-                  width: 2,
-                ),
-              ),
-              child: isCompleted
-                  ? const Icon(
-                      Icons.check_rounded,
-                      color: AppColors.primary,
-                      size: 20,
-                    )
-                  : null,
-            ),
+          const SizedBox(height: 6),
+          Text(
+            'Plant your first one and it will show up here every day.',
+            textAlign: TextAlign.center,
+            style: AppTypography.bodyMedium
+                .copyWith(color: AppColors.onSurfaceVariant),
           ),
         ],
       ),

@@ -1,59 +1,144 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mobile/core/errors/failures.dart';
+import 'package:mobile/core/errors/result.dart';
+import 'package:mobile/core/widgets/app_error.dart';
+import 'package:mobile/features/habits/domain/entities/daily_habit.dart';
 import 'package:mobile/features/habits/presentation/pages/today_page.dart';
+import 'package:mobile/injection/dependency_injection.dart';
+import 'package:mocktail/mocktail.dart';
 
+import '../../../helpers/mocks.dart';
 import '../../../helpers/pump_app.dart';
 
 void main() {
-  group('TodayPage', () {
-    testWidgets('renders greeting, progress ring, motivation quote, and habits', (tester) async {
-      tester.view.physicalSize = const Size(800, 1600);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.resetPhysicalSize);
+  late MockHabitRepository habits;
+  late MockEntryRepository entries;
 
-      await pumpApp(tester, const TodayPage(), overrides: signedOutOverrides());
+  setUpAll(registerFallbacks);
 
-      expect(find.text('Bloom'), findsOneWidget);
-      expect(find.text("Today's Progress"), findsOneWidget);
-      expect(find.text('Day Streak'), findsOneWidget);
-      expect(find.text('DAILY MOTIVATION'), findsOneWidget);
-      expect(find.text('DAILY HABITS'), findsOneWidget);
-      expect(find.text('Drink enough water'), findsOneWidget);
-      expect(find.text('Morning exercise'), findsOneWidget);
-      expect(find.text('Meditate'), findsOneWidget);
-      expect(find.text('Read a book'), findsOneWidget);
-    });
+  setUp(() {
+    habits = MockHabitRepository();
+    entries = MockEntryRepository();
+    when(() => entries.checkOff(
+          habitId: any(named: 'habitId'),
+          date: any(named: 'date'),
+        )).thenAnswer((_) async => Success(buildHabitEntryModel()));
+  });
 
-    testWidgets('interactive water counter increments on Add 250ml', (tester) async {
-      tester.view.physicalSize = const Size(800, 1600);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.resetPhysicalSize);
+  List<Override> overrides() => [
+        ...signedOutOverrides(),
+        habitRepositoryProvider.overrideWithValue(habits),
+        entryRepositoryProvider.overrideWithValue(entries),
+      ];
 
-      await pumpApp(tester, const TodayPage(), overrides: signedOutOverrides());
+  testWidgets('renders the habits the API returned', (tester) async {
+    when(() => habits.getHabitsForDate(any())).thenAnswer(
+      (_) async => Success([
+        buildDailyHabit(
+          habit: buildHabitModel(id: 'habit-1', name: 'Read'),
+          currentStreak: 3,
+        ),
+        buildDailyHabit(
+          habit: buildHabitModel(id: 'habit-2', name: 'Stretch'),
+          doneToday: true,
+          currentStreak: 9,
+        ),
+      ]),
+    );
 
-      expect(find.text('1.5L / 2.0L Goal'), findsOneWidget);
+    await pumpApp(tester, const TodayPage(), overrides: overrides());
 
-      await tester.tap(find.text('Add 250ml'));
-      await tester.pumpAndSettle();
+    expect(find.text('Read'), findsOneWidget);
+    // The second card sits below the fold in the test viewport, and a sliver
+    // does not build what it cannot show.
+    await tester.dragUntilVisible(
+      find.text('Stretch'),
+      find.byType(CustomScrollView),
+      const Offset(0, -80),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Stretch'), findsOneWidget);
+    // The old hardcoded demo habits are gone.
+    expect(find.text('Drink enough water'), findsNothing);
+    expect(find.text('Morning exercise'), findsNothing);
+  });
 
-      expect(find.text('1.8L / 2.0L Goal'), findsOneWidget);
-    });
+  testWidgets('the ring counts completions and the badge shows the top streak',
+      (tester) async {
+    when(() => habits.getHabitsForDate(any())).thenAnswer(
+      (_) async => Success([
+        buildDailyHabit(habit: buildHabitModel(id: 'habit-1', name: 'Read')),
+        buildDailyHabit(
+          habit: buildHabitModel(id: 'habit-2', name: 'Stretch'),
+          doneToday: true,
+          currentStreak: 9,
+        ),
+      ]),
+    );
 
-    testWidgets('tapping motivation card cycles quote', (tester) async {
-      tester.view.physicalSize = const Size(800, 1600);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.resetPhysicalSize);
+    await pumpApp(tester, const TodayPage(), overrides: overrides());
 
-      await pumpApp(tester, const TodayPage(), overrides: signedOutOverrides());
+    expect(find.text('1/2'), findsOneWidget);
+    expect(find.text('9'), findsOneWidget);
+    // The hardcoded 12-day streak is gone.
+    expect(find.text('12'), findsNothing);
+  });
 
-      final firstQuoteFinder = find.text('"Focus on the step you\'re taking, not the whole staircase."');
-      expect(firstQuoteFinder, findsOneWidget);
+  testWidgets('tapping a habit checks it off optimistically', (tester) async {
+    when(() => habits.getHabitsForDate(any())).thenAnswer(
+      (_) async => Success([
+        buildDailyHabit(habit: buildHabitModel(id: 'habit-1', name: 'Read')),
+      ]),
+    );
 
-      await tester.tap(find.text('DAILY MOTIVATION'));
-      await tester.pumpAndSettle();
+    await pumpApp(tester, const TodayPage(), overrides: overrides());
+    expect(find.text('0/1'), findsOneWidget);
 
-      expect(firstQuoteFinder, findsNothing);
-      expect(find.text('"The secret of your future is hidden in your daily routine."'), findsOneWidget);
-    });
+    await tester.tap(find.byKey(const ValueKey('habit-toggle-habit-1')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('1/1'), findsOneWidget);
+    verify(() => entries.checkOff(habitId: 'habit-1', date: any(named: 'date')))
+        .called(1);
+  });
+
+  testWidgets('a failed toggle reverts and shows a message', (tester) async {
+    when(() => habits.getHabitsForDate(any())).thenAnswer(
+      (_) async => Success([
+        buildDailyHabit(habit: buildHabitModel(id: 'habit-1', name: 'Read')),
+      ]),
+    );
+    when(() => entries.checkOff(
+          habitId: any(named: 'habitId'),
+          date: any(named: 'date'),
+        )).thenAnswer((_) async => const ResultError(NetworkFailure()));
+
+    await pumpApp(tester, const TodayPage(), overrides: overrides());
+    await tester.tap(find.byKey(const ValueKey('habit-toggle-habit-1')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('0/1'), findsOneWidget);
+    expect(find.byType(SnackBar), findsOneWidget);
+  });
+
+  testWidgets('shows an empty state when there are no habits yet',
+      (tester) async {
+    when(() => habits.getHabitsForDate(any()))
+        .thenAnswer((_) async => const Success(<DailyHabit>[]));
+
+    await pumpApp(tester, const TodayPage(), overrides: overrides());
+
+    expect(find.text('No habits yet'), findsOneWidget);
+  });
+
+  testWidgets('shows a retryable error when the load fails', (tester) async {
+    when(() => habits.getHabitsForDate(any()))
+        .thenAnswer((_) async => const ResultError(NetworkFailure()));
+
+    await pumpApp(tester, const TodayPage(), overrides: overrides());
+
+    expect(find.byType(AppError), findsOneWidget);
   });
 }
