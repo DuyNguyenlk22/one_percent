@@ -4,8 +4,8 @@
 /// Prefer the named form — a path can change without touching call sites.
 abstract final class RouteNames {
   // Bootstrap
-  static const String splash = 'splash';
-  static const String splashPath = '/';
+  static const String welcome = 'welcome';
+  static const String welcomePath = '/';
 
   // Auth
   static const String login = 'login';
@@ -42,7 +42,7 @@ abstract final class RouteNames {
 
   /// Routes reachable while signed out. Everything else redirects to login.
   static const Set<String> publicPaths = {
-    splashPath,
+    welcomePath,
     loginPath,
     registerPath,
     forgotPasswordPath,

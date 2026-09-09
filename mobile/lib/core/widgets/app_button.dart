@@ -30,6 +30,7 @@ class AppButton extends StatelessWidget {
     this.variant = AppButtonVariant.primary,
     this.isLoading = false,
     this.icon,
+    this.trailingIcon,
     this.isFullWidth = true,
   });
 
@@ -40,6 +41,7 @@ class AppButton extends StatelessWidget {
     this.onPressed,
     this.isLoading = false,
     this.icon,
+    this.trailingIcon,
     this.isFullWidth = true,
   }) : variant = AppButtonVariant.secondary;
 
@@ -50,6 +52,7 @@ class AppButton extends StatelessWidget {
     this.onPressed,
     this.isLoading = false,
     this.icon,
+    this.trailingIcon,
     this.isFullWidth = true,
   }) : variant = AppButtonVariant.outlined;
 
@@ -60,6 +63,7 @@ class AppButton extends StatelessWidget {
     this.onPressed,
     this.isLoading = false,
     this.icon,
+    this.trailingIcon,
     this.isFullWidth = false,
   }) : variant = AppButtonVariant.text;
 
@@ -75,6 +79,10 @@ class AppButton extends StatelessWidget {
 
   /// Optional leading icon, hidden while loading.
   final IconData? icon;
+
+  /// Optional trailing icon, hidden while loading. Use it for a "carry on"
+  /// arrow; a decorative glyph belongs after the label, not before it.
+  final IconData? trailingIcon;
 
   /// Whether the button stretches to fill its parent's width.
   final bool isFullWidth;
@@ -128,6 +136,10 @@ class AppButton extends StatelessWidget {
                     const SizedBox(width: 8),
                   ],
                   Text(label),
+                  if (trailingIcon != null) ...[
+                    const SizedBox(width: 8),
+                    Icon(trailingIcon, size: 20),
+                  ],
                 ],
               ),
       ),

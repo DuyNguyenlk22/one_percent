@@ -6,7 +6,7 @@ import '../../features/auth/presentation/pages/forgot_password_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/auth/presentation/providers/auth_provider.dart';
-import '../../core/widgets/app_loading.dart';
+import '../../features/onboarding/presentation/pages/welcome_page.dart';
 import '../shell/main_shell_scaffold.dart';
 import '../../features/habits/presentation/pages/today_page.dart';
 import '../../features/habits/presentation/pages/my_habits_page.dart';
@@ -22,9 +22,10 @@ final _rootNavigatorKey = GlobalKey<NavigatorState>();
 /// Redirects live here rather than in the pages: a page should not have to know
 /// whether the user may see it. The rules are:
 ///
-/// - status unknown → hold on the splash screen
+/// - status unknown → hold on the welcome screen
 /// - unauthenticated on a private route → go to login
-/// - authenticated on an auth route → go to the main shell
+/// - authenticated on an auth route → go to the main shell, except on the
+///   welcome screen, which every launch passes through
 final appRouterProvider = Provider<GoRouter>((ref) {
   final notifier = ValueNotifier<AuthStatus>(AuthStatus.unknown);
 
@@ -37,7 +38,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
-    initialLocation: RouteNames.splashPath,
+    initialLocation: RouteNames.welcomePath,
     debugLogDiagnostics: false,
     refreshListenable: notifier,
     redirect: (context, state) {
@@ -45,25 +46,29 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final location = state.matchedLocation;
       final isPublic = RouteNames.publicPaths.contains(location);
 
-      // Still restoring the stored session — stay on the splash screen.
+      // Still restoring the stored session — stay on the welcome screen.
       if (status == AuthStatus.unknown) {
-        return location == RouteNames.splashPath ? null : RouteNames.splashPath;
+        return location == RouteNames.welcomePath
+            ? null
+            : RouteNames.welcomePath;
       }
 
       if (status == AuthStatus.unauthenticated) {
-        return isPublic && location != RouteNames.splashPath
-            ? null
-            : RouteNames.loginPath;
+        return isPublic ? null : RouteNames.loginPath;
       }
 
-      // Authenticated: keep the user out of the auth pages.
+      // Authenticated: keep the user out of the auth pages. The welcome screen
+      // is the exception — it opens every launch and moves the user on itself
+      // once the brand has had its moment.
+      if (location == RouteNames.welcomePath) return null;
+
       return isPublic ? RouteNames.todayPath : null;
     },
     routes: [
       GoRoute(
-        path: RouteNames.splashPath,
-        name: RouteNames.splash,
-        builder: (context, state) => const _SplashPage(),
+        path: RouteNames.welcomePath,
+        name: RouteNames.welcome,
+        builder: (context, state) => const WelcomePage(),
       ),
       GoRoute(
         path: RouteNames.loginPath,
@@ -145,15 +150,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     ),
   );
 });
-
-/// Shown while `AuthNotifier` restores the stored session.
-class _SplashPage extends StatelessWidget {
-  const _SplashPage();
-
-  @override
-  Widget build(BuildContext context) =>
-      const Scaffold(body: AppLoading(message: 'Getting things ready…'));
-}
 
 /// Stands in for a feature that has not been built yet.
 ///

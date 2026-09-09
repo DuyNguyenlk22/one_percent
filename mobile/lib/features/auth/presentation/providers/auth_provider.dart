@@ -8,7 +8,7 @@ import '../../domain/entities/user.dart';
 /// Where the app is in the sign-in lifecycle.
 enum AuthStatus {
   /// Startup: the stored session has not been checked yet. The router holds
-  /// on the splash screen while this is the status.
+  /// on the welcome screen while this is the status.
   unknown,
 
   /// A valid session exists.
