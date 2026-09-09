@@ -28,6 +28,17 @@ void main() {
       );
     });
 
+    test('addDays and daysBetween survive a DST transition', () {
+      // Chile springs forward on the first Sunday of September. Adding 24-hour
+      // Durations across it lands on 23:00 the day before.
+      final before = DateTime(2026, 9, 1);
+      final after = AppDateUtils.addDays(before, 30);
+
+      expect(after, DateTime(2026, 10, 1));
+      expect(AppDateUtils.daysBetween(before, after), 30);
+      expect(AppDateUtils.subtractDays(after, 30), before);
+    });
+
     test('isSameDay ignores the time of day', () {
       expect(
         AppDateUtils.isSameDay(DateTime(2026, 9, 9, 1), DateTime(2026, 9, 9, 23)),

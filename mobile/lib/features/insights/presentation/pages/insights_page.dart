@@ -325,7 +325,7 @@ List<String> _weekdayInitials() {
   final today = AppDateUtils.today;
   return [
     for (var back = 6; back >= 0; back--)
-      AppDateUtils.weekdayLabel(today.subtract(Duration(days: back)))
+      AppDateUtils.weekdayLabel(AppDateUtils.subtractDays(today, back))
           .substring(0, 1),
   ];
 }

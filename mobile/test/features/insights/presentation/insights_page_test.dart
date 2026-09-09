@@ -45,8 +45,8 @@ void main() {
           to: any(named: 'to'),
         )).thenAnswer((_) async => Success([
           AppDateUtils.today,
-          AppDateUtils.today.subtract(const Duration(days: 1)),
-          AppDateUtils.today.subtract(const Duration(days: 2)),
+          AppDateUtils.subtractDays(AppDateUtils.today, 1),
+          AppDateUtils.subtractDays(AppDateUtils.today, 2),
         ]));
 
     await pumpApp(tester, const InsightsPage(), overrides: overrides());

@@ -42,7 +42,7 @@ class InsightsNotifier extends AsyncNotifier<InsightsSummary> {
     if (habits.isEmpty) return InsightsSummary.empty;
 
     final to = AppDateUtils.today;
-    final from = to.subtract(const Duration(days: insightsWindowDays - 1));
+    final from = AppDateUtils.subtractDays(to, insightsWindowDays - 1);
 
     final getEntries = ref.read(getEntriesUseCaseProvider);
     final results = await Future.wait([

@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mobile/core/utils/date_utils.dart';
 import 'package:mobile/features/insights/domain/insights_calculator.dart';
 
 import '../../../helpers/mocks.dart';
@@ -36,7 +37,7 @@ void main() {
 
   test('a perfect week is 100% consistent with a full streak', () {
     final everyDay = [
-      for (var day = 0; day < 7; day++) from.add(Duration(days: day)),
+      for (var day = 0; day < 7; day++) AppDateUtils.addDays(from, day),
     ];
 
     final summary = InsightsCalculator.compute(
@@ -113,7 +114,7 @@ void main() {
       habits: [read, newHabit],
       entriesByHabit: {
         'habit-1': [
-          for (var day = 0; day < 7; day++) from.add(Duration(days: day)),
+          for (var day = 0; day < 7; day++) AppDateUtils.addDays(from, day),
         ],
         'habit-3': [DateTime(2026, 3, 10)],
       },
@@ -159,7 +160,7 @@ void main() {
       entriesByHabit: {
         'habit-1': const [],
         'habit-2': [
-          for (var day = 0; day < 7; day++) from.add(Duration(days: day)),
+          for (var day = 0; day < 7; day++) AppDateUtils.addDays(from, day),
         ],
       },
       from: from,
