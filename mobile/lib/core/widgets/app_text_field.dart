@@ -29,6 +29,7 @@ class AppTextField extends StatefulWidget {
     this.height,
     this.isOtp = false,
     this.onKey,
+    this.contentPadding,
   });
 
   /// Factory constructor for single-digit OTP input boxes (used on Forgot Password / Verification screens).
@@ -115,6 +116,9 @@ class AppTextField extends StatefulWidget {
 
   /// Raw keyboard event handler (used for OTP backspace handling).
   final void Function(RawKeyEvent)? onKey;
+
+  /// Custom padding inside the input container.
+  final EdgeInsetsGeometry? contentPadding;
 
   @override
   State<AppTextField> createState() => _AppTextFieldState();
@@ -227,7 +231,7 @@ class _AppTextFieldState extends State<AppTextField> {
         // Top label with 16px horizontal indent matching Stitch design
         if (widget.label != null && widget.label!.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.only(left: 16.0, bottom: 8.0),
+            padding: const EdgeInsets.only(left: 16.0, bottom: 6.0),
             child: Text(
               widget.label!,
               style: AppTypography.labelSmall.copyWith(
@@ -252,15 +256,22 @@ class _AppTextFieldState extends State<AppTextField> {
           style: AppTypography.bodyMedium.copyWith(color: AppColors.onSurface),
           cursorColor: AppColors.primary,
           decoration: InputDecoration(
+            isDense: true,
             hintText: widget.hintText,
             hintStyle: AppTypography.bodyMedium.copyWith(
               color: AppColors.outlineVariant,
             ),
             filled: true,
             fillColor: AppColors.surfaceContainer, // #F0EEE9
-            contentPadding: EdgeInsets.symmetric(
-              horizontal: widget.prefixIcon != null ? 20.0 : 24.0,
-              vertical: 18.0,
+            contentPadding: widget.contentPadding ??
+                EdgeInsets.symmetric(
+                  horizontal: widget.prefixIcon != null ? 20.0 : 24.0,
+                  vertical: 14.0,
+                ),
+            errorStyle: AppTypography.bodySmall.copyWith(
+              color: AppColors.error,
+              fontSize: 12.0,
+              height: 1.1,
             ),
             prefixIcon: widget.prefixIcon != null
                 ? Padding(

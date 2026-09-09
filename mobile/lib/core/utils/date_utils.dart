@@ -26,8 +26,28 @@ abstract final class AppDateUtils {
     return '${date.year}-$month-$day';
   }
 
-  /// Parses an API date or ISO-8601 timestamp into a local calendar day.
-  static DateTime fromApiDate(String value) => dateOnly(DateTime.parse(value).toLocal());
+  /// Parses an API date into the local calendar day it denotes.
+  ///
+  /// The backend writes `HabitEntry.date` at UTC midnight, so a timestamp is
+  /// read in UTC — converting to local time first would shift the day back for
+  /// anyone west of Greenwich. A bare `yyyy-MM-dd` is already a day with no
+  /// zone, so it is taken as-is.
+  static DateTime fromApiDate(String value) {
+    if (value.length == 10) return DateTime.parse(value);
+    final utc = DateTime.parse(value).toUtc();
+    return DateTime(utc.year, utc.month, utc.day);
+  }
+
+  /// [date] moved by [days] calendar days.
+  ///
+  /// Calendar arithmetic, not `Duration`: adding 24 hours across a daylight
+  /// saving transition lands on 23:00 or 01:00 rather than midnight, which
+  /// silently shifts the day and can make a window one day short or long.
+  static DateTime addDays(DateTime date, int days) =>
+      DateTime(date.year, date.month, date.day + days);
+
+  /// [date] moved back by [days] calendar days. See [addDays].
+  static DateTime subtractDays(DateTime date, int days) => addDays(date, -days);
 
   /// Whether both instants fall on the same calendar day.
   static bool isSameDay(DateTime a, DateTime b) =>
@@ -40,18 +60,27 @@ abstract final class AppDateUtils {
   static bool isYesterday(DateTime date) =>
       isSameDay(date, DateTime.now().subtract(const Duration(days: 1)));
 
-  /// Whole days between two calendar days, ignoring time and DST shifts.
-  static int daysBetween(DateTime from, DateTime to) =>
-      dateOnly(to).difference(dateOnly(from)).inDays;
+  /// Whole calendar days between two days.
+  ///
+  /// Measured in UTC, which has no daylight saving: a local `difference` counts
+  /// a spring-forward day as 23 hours and quietly loses it, so a 30-day window
+  /// would come back 29 days long.
+  static int daysBetween(DateTime from, DateTime to) {
+    final start = dateOnly(from);
+    final end = dateOnly(to);
+    return DateTime.utc(end.year, end.month, end.day)
+        .difference(DateTime.utc(start.year, start.month, start.day))
+        .inDays;
+  }
 
   /// The Monday of [date]'s week.
   static DateTime startOfWeek(DateTime date) =>
-      dateOnly(date).subtract(Duration(days: date.weekday - DateTime.monday));
+      subtractDays(dateOnly(date), date.weekday - DateTime.monday);
 
   /// The seven days of [date]'s week, Monday first.
   static List<DateTime> weekOf(DateTime date) {
     final start = startOfWeek(date);
-    return List.generate(7, (index) => start.add(Duration(days: index)));
+    return List.generate(7, (index) => addDays(start, index));
   }
 
   /// Short weekday label, e.g. `Mon`.

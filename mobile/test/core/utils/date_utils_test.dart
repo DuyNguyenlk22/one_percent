@@ -13,12 +13,30 @@ void main() {
       expect(AppDateUtils.toApiDate(DateTime(2026, 12, 25)), '2026-12-25');
     });
 
-    test('fromApiDate parses both a plain date and a timestamp', () {
+    test('fromApiDate reads the UTC calendar day in every timezone', () {
       expect(AppDateUtils.fromApiDate('2026-09-09'), DateTime(2026, 9, 9));
+      // Entries are stored at UTC midnight. Converting to local time first
+      // would move this to the 8th anywhere west of Greenwich.
       expect(
-        AppDateUtils.fromApiDate('2026-09-09T00:00:00.000Z').day,
-        isIn(const [8, 9, 10]), // the local day depends on the test machine's zone
+        AppDateUtils.fromApiDate('2026-09-09T00:00:00.000Z'),
+        DateTime(2026, 9, 9),
       );
+      // Any instant on the 9th UTC still reads as the 9th.
+      expect(
+        AppDateUtils.fromApiDate('2026-09-09T23:59:59.000Z'),
+        DateTime(2026, 9, 9),
+      );
+    });
+
+    test('addDays and daysBetween survive a DST transition', () {
+      // Chile springs forward on the first Sunday of September. Adding 24-hour
+      // Durations across it lands on 23:00 the day before.
+      final before = DateTime(2026, 9, 1);
+      final after = AppDateUtils.addDays(before, 30);
+
+      expect(after, DateTime(2026, 10, 1));
+      expect(AppDateUtils.daysBetween(before, after), 30);
+      expect(AppDateUtils.subtractDays(after, 30), before);
     });
 
     test('isSameDay ignores the time of day', () {

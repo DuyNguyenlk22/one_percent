@@ -4,7 +4,6 @@ import {
   Delete,
   Get,
   Param,
-  ParseDatePipe,
   ParseUUIDPipe,
   Post,
   Query,
@@ -53,9 +52,13 @@ export class EntriesController {
 
   @Delete(':id/entries/:date')
   deleteEntry(
-    @Param('id', new ParseUUIDPipe()) entryId: string,
-    @Param('date', new ParseDatePipe()) date: string,
+    @Param('id', new ParseUUIDPipe()) habitId: string,
+    // Not ParseDatePipe: it yields a Date parsed as a local instant, which
+    // reintroduces the day shift standardizeDate exists to prevent. The
+    // service normalises the string itself.
+    @Param('date') date: string,
+    @CurrentUser('id') userId: string,
   ) {
-    return this.entriesService.deleteEntry(entryId, date);
+    return this.entriesService.deleteEntry(userId, habitId, date);
   }
 }

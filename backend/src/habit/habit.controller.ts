@@ -45,9 +45,9 @@ export class HabitController {
   @Get()
   async getHabits(
     @CurrentUser('id') userId: string,
-    @Query('date') date?: GetHabitsDto,
+    @Query() query: GetHabitsDto,
   ) {
-    return await this.habitService.getHabits(userId, date);
+    return await this.habitService.getHabits(userId, query);
   }
 
   @Patch(':id')

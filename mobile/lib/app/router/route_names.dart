@@ -24,6 +24,9 @@ abstract final class RouteNames {
   static const String habits = 'habits';
   static const String habitsPath = '/habits';
 
+  static const String addHabit = 'add-habit';
+  static const String addHabitPath = 'add';
+
   static const String habitDetail = 'habit-detail';
 
   /// Nested under [habitsPath]; use [habitDetailLocation] to build the URL.

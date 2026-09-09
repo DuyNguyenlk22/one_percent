@@ -19,8 +19,16 @@ class User {
   /// When the account was created.
   final DateTime createdAt;
 
-  /// The part of the email before the `@`, for greeting the user.
-  String get displayName => email.split('@').first;
+  /// A display name derived from the email local part, capitalised.
+  ///
+  /// The API only ever sends an email, so this is the most the app can honestly
+  /// show. Empty when the local part is empty, which callers greet around
+  /// rather than substituting a made-up name.
+  String get displayName {
+    final local = email.split('@').first;
+    if (local.isEmpty) return '';
+    return '${local[0].toUpperCase()}${local.substring(1)}';
+  }
 
   @override
   bool operator ==(Object other) =>

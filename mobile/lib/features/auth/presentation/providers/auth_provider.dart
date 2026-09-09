@@ -68,6 +68,13 @@ class AuthState {
 class AuthNotifier extends Notifier<AuthState> {
   @override
   AuthState build() {
+    // A 401 on any guarded call means the session is gone. The interceptor has
+    // already dropped the token; flipping status is what moves the router.
+    ref.listen(sessionExpiredProvider, (previous, next) {
+      if (previous == null || next == previous) return;
+      state = const AuthState(status: AuthStatus.unauthenticated);
+    });
+
     // Restore the session once, right after the first frame is scheduled.
     Future.microtask(restoreSession);
     return const AuthState();

@@ -1,18 +1,14 @@
-import {
-  Injectable,
-  InternalServerErrorException,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 import { CreateEntryDto } from './dto/create-entry';
-import { standardizeDate, TODAY } from 'src/utils/dayjs';
+import { standardizeDate, today } from 'src/utils/dayjs';
 
 @Injectable()
 export class EntriesService {
   constructor(private prisma: PrismaService) {}
 
   async checkOff(userId: string, habitId: string, dto: CreateEntryDto) {
-    const date = dto.date ? standardizeDate(dto.date) : TODAY;
+    const date = dto.date ? standardizeDate(dto.date) : today();
 
     const habit = await this.prisma.habit.findFirst({
       where: {
@@ -74,32 +70,27 @@ export class EntriesService {
     };
   }
 
-  async deleteEntry(entryId: string, date: string) {
-    const habit = await this.prisma.habitEntry.findFirst({
-      where: {
-        id: entryId,
-        date,
-      },
+  async deleteEntry(userId: string, habitId: string, date: string) {
+    const habit = await this.prisma.habit.findFirst({
+      where: { id: habitId, userId },
     });
 
     if (!habit) {
+      throw new NotFoundException('Habit not found!');
+    }
+
+    const habitId_date = { habitId, date: standardizeDate(date) };
+
+    const entry = await this.prisma.habitEntry.findUnique({
+      where: { habitId_date },
+    });
+
+    if (!entry) {
       throw new NotFoundException('Habit entry not found!');
     }
 
-    const deletedEntry = await this.prisma.habitEntry.delete({
-      where: {
-        id: entryId,
-        date,
-      },
-    });
+    await this.prisma.habitEntry.delete({ where: { habitId_date } });
 
-    if (!deletedEntry) {
-      throw new InternalServerErrorException();
-    } else {
-      return {
-        code: 200,
-        message: `Deleted successfully`,
-      };
-    }
+    return { code: 200, message: 'Deleted successfully' };
   }
 }
