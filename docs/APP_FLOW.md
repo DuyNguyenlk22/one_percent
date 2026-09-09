@@ -157,7 +157,7 @@ flowchart TD
 
     subgraph Shell["StatefulShellRoute.indexedStack — MainShellScaffold<br/>frosted-glass floating bottom nav, 4 branches"]
         TODAY["/today — TodayPage"]
-        ROUT["/habits — RoutinesPage"]
+        ROUT["/habits — MyHabitsPage"]
         INS["/insights — InsightsPage"]
         PROF["/profile — ProfilePage"]
     end
@@ -178,7 +178,7 @@ flowchart TD
     TODAY -->|"avatar tap · goNamed"| PROF
     TODAY -->|"FAB · pushNamed"| ADD
     ROUT -->|"Add card · pushNamed"| ADD
-    ROUT -->|"action tap"| TODAY
+    ROUT -->|"rename · recolour · archive · delete"| ROUT
     ROUT -.->|"route exists, no link yet"| DETAIL
     ADD -->|"Confirm / Close · pop"| ROUT
     PROF -->|"Log out → status flips"| LOGIN
@@ -357,117 +357,72 @@ history, deleting discards it.
 
 ---
 
-## 8. What is wired vs. what is UI-only
+## 8. What is wired
 
-This is the most important thing to know before adding features. The Stitch
-screens landed ahead of their data layers.
+Every screen now reads and writes the real API. The Stitch mockups that had no
+schema behind them were fitted to the contract rather than faked.
 
 ```mermaid
 flowchart TD
     subgraph Live["Live end-to-end"]
-        A1["Login · Register"]
-        A2["Session restore + token refresh-on-401"]
-        A3["Logout"]
-        A4["Router auth redirects"]
+        A1["Login · Register · Logout"]
+        A2["Session restore, and 401 → router redirect"]
+        A3["Today — GET /habits?date=, optimistic check-off"]
+        A4["My Habits — rename · recolour · archive · delete"]
+        A5["Add Habit — POST /habits with name + colour"]
+        A6["Insights · Profile — 30 days of entry history"]
     end
-    subgraph Local["UI complete, local state only"]
-        B1["Today — 4 hardcoded demo habits<br/>water slider, 3 toggles, quote cycler"]
-        B2["Routines — static Morning/Afternoon/Evening cards"]
-        B3["Insights — hardcoded chart via _WeeklyFlowPainter"]
-        B4["Add Habit — Confirm shows a SnackBar and pops"]
-        B5["Forgot Password — 4-digit OTP, 600ms fake delay"]
+    subgraph Local["Still UI-only"]
+        B1["Forgot Password — 4-digit OTP, no endpoint exists"]
+        B2["Today's quote cycler — decoration, no data"]
     end
-    subgraph Missing["Contract declared, no implementation"]
-        C1["HabitRepository (interface only)"]
-        C2["EntryRepository (interface only)"]
-        C3["habits/data/** · entries/data/** = .gitkeep"]
-        C4["No habit/entry providers or use cases"]
-    end
-    Local -.->|"next step"| Missing -.->|"then"| Live
 ```
 
 Concretely:
 
-- **Fully wired:** `features/auth` has all four layers plus DI providers and use
-  cases (`Login`, `Register`, `Logout`, `GetCurrentUser`). Only `email` reaches
-  the UI from the server — `TodayPage` and `ProfilePage` derive a display name
-  from `user?.email.split('@').first`, falling back to `'Sarah'`.
-- **Domain declared, data empty:** `Habit` / `HabitEntry` entities and both
-  repository interfaces exist and document the exact endpoints they map to, but
-  `habits/data/` and `entries/data/` contain only `.gitkeep`. There are no
-  models, datasources, impls, use cases, or providers, and nothing is registered
-  in `dependency_injection.dart`.
-- **Placeholder route:** `/habits/:habitId` renders `_PlaceholderPage`. No page
-  links to it yet.
-- **Backend-only:** the API already serves every habit/entry endpoint the mobile
-  interfaces describe, so closing the gap is client-side work against a stable
-  contract.
+- **Today** shows the real habit list. The ring is done/total, the badge is the
+  highest `currentStreak`, and tapping a card posts or deletes an entry
+  optimistically — the row flips first and rolls back if the write is rejected.
+- **My Habits** replaced the Routines mockup. Routines were three hardcoded
+  cards with no table behind them, while `PATCH` and `DELETE /habits/:id` had no
+  caller anywhere in the app; the tab now uses both.
+- **Add Habit** posts `{ name, color }`. The goal, frequency and reminder-time
+  controls are gone: the schema stores none of them.
+- **Insights and Profile** compute from history. There is no aggregate endpoint,
+  so `insightsProvider` fetches `GET /habits` once and then each habit's entries
+  in parallel over a 30-day window, and a pure `InsightsCalculator` turns that
+  into streaks, per-day completion and per-habit rates.
+- **Dropped rather than faked:** the water-quantity habit, routines as a stored
+  concept, schedules and reminders, and the hardcoded 88% / 14 / 28 stat row.
+  None of them had anywhere to live.
 
-### The natural next slice
+Extending the schema for quantity habits, routines and schedules is a separate
+piece of work, specified nowhere yet.
 
-```mermaid
-flowchart LR
-    M["HabitModel.fromJson"] --> DS["HabitRemoteDataSource<br/>GET/POST/PATCH/DELETE /habits"]
-    DS --> IMPL["HabitRepositoryImpl<br/>AppException → Failure"]
-    IMPL --> UCS["GetHabits · CreateHabit<br/>ToggleEntry"]
-    UCS --> PROV["habitsProvider<br/>(AsyncNotifier)"]
-    PROV --> TP["TodayPage replaces<br/>_exerciseCompleted et al."]
-    PROV --> AP["AddHabitPage._onConfirm<br/>calls CreateHabit"]
-```
+## 9. Remaining rough edges
 
-Mirror `features/auth` exactly — the layering, the `Result` handling, and the DI
-registration are already proven there.
+The six defects this document previously listed here — the register token claim,
+the unbound `date` query DTO, the mis-keyed entry delete, the module-load
+`TODAY`, the row-spreading `updateHabits`, and the unsupplied
+`AuthInterceptor.onUnauthorized` — are fixed and covered by tests. What is left:
 
----
+1. **`ForgotPasswordPage` has no backend.** There is no `/auth/forgot-password`
+   or `/auth/reset-password` on the server; the OTP screen verifies any 4 digits
+   after a fixed delay.
 
-## 9. Rough edges found while walking the code
+2. **`GET /habits?date=` loads a habit's whole entry history** to compute its
+   streak. Fine at personal scale, but it needs a bounded window before the data
+   grows.
 
-Not part of the flow as designed, but they will bite whoever wires the next
-feature. Listed with the evidence, not as a fix list.
+3. **Insights costs N+1 requests** — one for the habit list, then one per habit
+   for its entries. Acceptable for now, and the obvious fix is a single
+   aggregate endpoint on the server.
 
-1. **Register issues a token the guard rejects.**
-   `auth.service.ts` signs `{ id: user.id }` on register but `{ userId: user.id }`
-   on login, while `JwtStrategy.validate` reads `payload.userId`. A token from
-   `POST /auth/register` therefore resolves `userId: undefined` and fails the
-   guard — a newly registered user is authenticated in the app's state but every
-   subsequent call would 401.
-
-2. **`GET /habits?date=` never reaches the service as a DTO.**
-   `habit.controller.ts` declares `@Query('date') date?: GetHabitsDto`, which
-   binds the raw string, but `habit.service.ts` reads `dateDto.date`. That is
-   `undefined`, so `dayjs(undefined)` silently falls back to *now* rather than
-   the requested day. Binding `@Query() query: GetHabitsDto` would match the
-   service's expectation.
-
-3. **`DELETE /habits/:id/entries/:date` looks up the wrong id and skips ownership.**
-   The controller names the path param `entryId` but the route supplies the
-   *habit* id, and `entriesService.deleteEntry` queries
-   `habitEntry.findFirst({ id: entryId, date })` — so it will not match. It is
-   also the only `/habits/**` handler that takes neither `@CurrentUser` nor an
-   ownership check.
-
-4. **Dates are stored as full ISO timestamps against a `DATE` column.**
-   `standardizeDate` returns `dayjs(date).toISOString()`, and `TODAY` is
-   evaluated **once at module load**, so a long-running process keeps handing out
-   the boot day. Formatting to `YYYY-MM-DD` (as `formatDate` already does) would
-   match the schema and the `@@unique([habitId, date])` intent.
-
-5. **`updateHabits` spreads the whole existing row into the update payload,**
-   including `id` and `createdAt`, and forces `archivedAt: null` whenever
-   `archived` is falsy — so a plain rename un-archives the habit.
-
-6. **`AuthInterceptor.onUnauthorized` is never supplied.** The DI layer
-   constructs the interceptor without the callback, so a 401 clears the token but
-   nothing tells the router; the redirect only happens on the next
-   `getCurrentUser`. Wiring it (or listening to
-   `AuthRepository.authStateChanges`, which is exposed but currently unread
-   outside the repository) would close the loop.
-
-7. **`ForgotPasswordPage` has no backend.** There is no
-   `/auth/forgot-password` or `/auth/reset-password` on the server; the OTP
-   screen verifies any 4 digits after a fixed delay.
-
----
+4. **Day keys are UTC on both sides.** `HabitEntry.date` is written at UTC
+   midnight and read back in UTC; the client's `AppDateUtils` does calendar
+   arithmetic rather than adding 24-hour `Duration`s. Both suites are run under
+   `Pacific/Kiritimati`, `Pacific/Midway` and `America/Santiago` because every
+   one of those rules was broken until a test in one of those zones caught it.
 
 ## 10. File map
 
@@ -476,6 +431,8 @@ feature. Listed with the evidence, not as a fix list.
 | App entry / bootstrap | [mobile/lib/main.dart](../mobile/lib/main.dart) |
 | Routing + redirects | [mobile/lib/app/router/app_router.dart](../mobile/lib/app/router/app_router.dart) |
 | Route constants | [mobile/lib/app/router/route_names.dart](../mobile/lib/app/router/route_names.dart) |
+| Habit state + optimistic toggle | [mobile/lib/features/habits/presentation/providers/daily_habits_provider.dart](../mobile/lib/features/habits/presentation/providers/daily_habits_provider.dart) |
+| History maths (pure) | [mobile/lib/features/insights/domain/insights_calculator.dart](../mobile/lib/features/insights/domain/insights_calculator.dart) |
 | Tab shell / bottom nav | [mobile/lib/app/shell/main_shell_scaffold.dart](../mobile/lib/app/shell/main_shell_scaffold.dart) |
 | Object graph | [mobile/lib/injection/dependency_injection.dart](../mobile/lib/injection/dependency_injection.dart) |
 | Auth state machine | [mobile/lib/features/auth/presentation/providers/auth_provider.dart](../mobile/lib/features/auth/presentation/providers/auth_provider.dart) |
