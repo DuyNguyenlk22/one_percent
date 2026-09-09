@@ -56,27 +56,23 @@ export class HabitService {
   }
 
   async updateHabits(id: string, userId: string, habitDto: UpdateHabitDto) {
-    const habit = await this.prisma.habit.findFirst({
-      where: {
-        id,
-        userId,
-      },
-    });
+    const habit = await this.prisma.habit.findFirst({ where: { id, userId } });
 
     if (!habit) {
       throw new NotFoundException('Habit not found!');
     }
 
-    const data: HabitUpdateInput = {
-      ...habit,
-      ...habitDto,
-      archivedAt: habitDto.archived ? new Date() : null,
-    };
+    const { archived, ...fields } = habitDto;
 
-    return await this.prisma.habit.update({
-      where: { id },
-      data,
-    });
+    // Only the supplied fields are written. Spreading the existing row would
+    // send back `id` and `createdAt`, and defaulting `archived` would make a
+    // plain rename un-archive the habit.
+    const data: HabitUpdateInput = { ...fields };
+    if (archived !== undefined) {
+      data.archivedAt = archived ? new Date() : null;
+    }
+
+    return await this.prisma.habit.update({ where: { id }, data });
   }
 
   async deleteHabit(id: string, userId: string) {

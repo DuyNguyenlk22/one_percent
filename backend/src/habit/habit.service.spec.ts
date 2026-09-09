@@ -77,3 +77,73 @@ describe('HabitService.getHabits', () => {
     expect(decorated.currentStreak).toBe(0);
   });
 });
+
+describe('HabitService.updateHabits', () => {
+  const archived = {
+    id: 'cccccccc-0000-4000-8000-000000000001',
+    userId: 'user-1',
+    name: 'Read',
+    color: '#4D6054',
+    createdAt: new Date('2026-01-01T00:00:00.000Z'),
+    archivedAt: new Date('2026-02-01T00:00:00.000Z'),
+  };
+
+  let service: HabitService;
+  let prisma: { habit: { findFirst: jest.Mock; update: jest.Mock } };
+
+  beforeEach(async () => {
+    prisma = {
+      habit: {
+        findFirst: jest.fn().mockResolvedValue(archived),
+        update: jest
+          .fn()
+          .mockImplementation(({ data }) => ({ ...archived, ...data })),
+      },
+    };
+    const moduleRef = await Test.createTestingModule({
+      providers: [HabitService, { provide: PrismaService, useValue: prisma }],
+    }).compile();
+    service = moduleRef.get(HabitService);
+  });
+
+  it('a rename leaves archivedAt alone', async () => {
+    await service.updateHabits(archived.id, 'user-1', { name: 'Read daily' });
+
+    expect(prisma.habit.update).toHaveBeenCalledWith({
+      where: { id: archived.id },
+      data: { name: 'Read daily' },
+    });
+  });
+
+  it('never writes immutable columns back', async () => {
+    await service.updateHabits(archived.id, 'user-1', { color: '#8A9A5B' });
+
+    const { data } = prisma.habit.update.mock.calls[0][0];
+    expect(data).not.toHaveProperty('id');
+    expect(data).not.toHaveProperty('createdAt');
+    expect(data).not.toHaveProperty('userId');
+  });
+
+  it('archived true stamps archivedAt', async () => {
+    await service.updateHabits(archived.id, 'user-1', { archived: true });
+
+    const { data } = prisma.habit.update.mock.calls[0][0];
+    expect(data.archivedAt).toBeInstanceOf(Date);
+    expect(data).not.toHaveProperty('archived');
+  });
+
+  it('archived false clears archivedAt', async () => {
+    await service.updateHabits(archived.id, 'user-1', { archived: false });
+
+    const { data } = prisma.habit.update.mock.calls[0][0];
+    expect(data.archivedAt).toBeNull();
+  });
+
+  it('rejects a habit the caller does not own', async () => {
+    prisma.habit.findFirst.mockResolvedValue(null);
+
+    await expect(
+      service.updateHabits(archived.id, 'someone-else', { name: 'Nope' }),
+    ).rejects.toThrow('Habit not found!');
+  });
+});
