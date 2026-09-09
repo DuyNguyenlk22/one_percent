@@ -38,7 +38,7 @@ describe('HabitService.getHabits', () => {
   it('treats an empty query object as no date', async () => {
     prisma.habit.findMany.mockResolvedValue([habitRow]);
 
-    const result = await service.getHabits('user-1', {} as never);
+    const result = await service.getHabits('user-1', {});
 
     expect(result).toEqual([habitRow]);
   });
@@ -66,7 +66,10 @@ describe('HabitService.getHabits', () => {
 
   it('reports doneToday false for a day with no entry', async () => {
     prisma.habit.findMany.mockResolvedValue([
-      { ...habitRow, entries: [{ date: new Date('2026-03-08T00:00:00.000Z') }] },
+      {
+        ...habitRow,
+        entries: [{ date: new Date('2026-03-08T00:00:00.000Z') }],
+      },
     ]);
 
     const [decorated] = (await service.getHabits('user-1', {
@@ -97,7 +100,10 @@ describe('HabitService.updateHabits', () => {
         findFirst: jest.fn().mockResolvedValue(archived),
         update: jest
           .fn()
-          .mockImplementation(({ data }) => ({ ...archived, ...data })),
+          .mockImplementation((args: { data: Record<string, unknown> }) => ({
+            ...archived,
+            ...args.data,
+          })),
       },
     };
     const moduleRef = await Test.createTestingModule({
@@ -105,6 +111,15 @@ describe('HabitService.updateHabits', () => {
     }).compile();
     service = moduleRef.get(HabitService);
   });
+
+  /// The `data` payload of the first recorded update, typed so the assertions
+  /// below are not reaching into `any`.
+  const recordedData = (): Record<string, unknown> => {
+    const calls = prisma.habit.update.mock.calls as unknown as Array<
+      [{ data: Record<string, unknown> }]
+    >;
+    return calls[0][0].data;
+  };
 
   it('a rename leaves archivedAt alone', async () => {
     await service.updateHabits(archived.id, 'user-1', { name: 'Read daily' });
@@ -118,7 +133,7 @@ describe('HabitService.updateHabits', () => {
   it('never writes immutable columns back', async () => {
     await service.updateHabits(archived.id, 'user-1', { color: '#8A9A5B' });
 
-    const { data } = prisma.habit.update.mock.calls[0][0];
+    const data = recordedData();
     expect(data).not.toHaveProperty('id');
     expect(data).not.toHaveProperty('createdAt');
     expect(data).not.toHaveProperty('userId');
@@ -127,7 +142,7 @@ describe('HabitService.updateHabits', () => {
   it('archived true stamps archivedAt', async () => {
     await service.updateHabits(archived.id, 'user-1', { archived: true });
 
-    const { data } = prisma.habit.update.mock.calls[0][0];
+    const data = recordedData();
     expect(data.archivedAt).toBeInstanceOf(Date);
     expect(data).not.toHaveProperty('archived');
   });
@@ -135,7 +150,7 @@ describe('HabitService.updateHabits', () => {
   it('archived false clears archivedAt', async () => {
     await service.updateHabits(archived.id, 'user-1', { archived: false });
 
-    const { data } = prisma.habit.update.mock.calls[0][0];
+    const data = recordedData();
     expect(data.archivedAt).toBeNull();
   });
 

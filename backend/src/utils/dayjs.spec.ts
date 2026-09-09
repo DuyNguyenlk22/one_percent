@@ -24,6 +24,8 @@ describe('formatDate', () => {
 describe('today', () => {
   it('is a function, so a long-running process does not keep its boot day', () => {
     expect(typeof today).toBe('function');
-    expect(today().toISOString()).toBe(standardizeDate(new Date()).toISOString());
+    expect(today().toISOString()).toBe(
+      standardizeDate(new Date()).toISOString(),
+    );
   });
 });
