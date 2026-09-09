@@ -5,14 +5,14 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 import { CreateEntryDto } from './dto/create-entry';
-import { standardizeDate, TODAY } from 'src/utils/dayjs';
+import { standardizeDate, today } from 'src/utils/dayjs';
 
 @Injectable()
 export class EntriesService {
   constructor(private prisma: PrismaService) {}
 
   async checkOff(userId: string, habitId: string, dto: CreateEntryDto) {
-    const date = dto.date ? standardizeDate(dto.date) : TODAY;
+    const date = dto.date ? standardizeDate(dto.date) : today();
 
     const habit = await this.prisma.habit.findFirst({
       where: {
