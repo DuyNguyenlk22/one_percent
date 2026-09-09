@@ -26,8 +26,17 @@ abstract final class AppDateUtils {
     return '${date.year}-$month-$day';
   }
 
-  /// Parses an API date or ISO-8601 timestamp into a local calendar day.
-  static DateTime fromApiDate(String value) => dateOnly(DateTime.parse(value).toLocal());
+  /// Parses an API date into the local calendar day it denotes.
+  ///
+  /// The backend writes `HabitEntry.date` at UTC midnight, so a timestamp is
+  /// read in UTC — converting to local time first would shift the day back for
+  /// anyone west of Greenwich. A bare `yyyy-MM-dd` is already a day with no
+  /// zone, so it is taken as-is.
+  static DateTime fromApiDate(String value) {
+    if (value.length == 10) return DateTime.parse(value);
+    final utc = DateTime.parse(value).toUtc();
+    return DateTime(utc.year, utc.month, utc.day);
+  }
 
   /// Whether both instants fall on the same calendar day.
   static bool isSameDay(DateTime a, DateTime b) =>

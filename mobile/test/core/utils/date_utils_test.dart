@@ -13,11 +13,18 @@ void main() {
       expect(AppDateUtils.toApiDate(DateTime(2026, 12, 25)), '2026-12-25');
     });
 
-    test('fromApiDate parses both a plain date and a timestamp', () {
+    test('fromApiDate reads the UTC calendar day in every timezone', () {
       expect(AppDateUtils.fromApiDate('2026-09-09'), DateTime(2026, 9, 9));
+      // Entries are stored at UTC midnight. Converting to local time first
+      // would move this to the 8th anywhere west of Greenwich.
       expect(
-        AppDateUtils.fromApiDate('2026-09-09T00:00:00.000Z').day,
-        isIn(const [8, 9, 10]), // the local day depends on the test machine's zone
+        AppDateUtils.fromApiDate('2026-09-09T00:00:00.000Z'),
+        DateTime(2026, 9, 9),
+      );
+      // Any instant on the 9th UTC still reads as the 9th.
+      expect(
+        AppDateUtils.fromApiDate('2026-09-09T23:59:59.000Z'),
+        DateTime(2026, 9, 9),
       );
     });
 
