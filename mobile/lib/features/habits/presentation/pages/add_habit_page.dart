@@ -1,26 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_typography.dart';
+import '../providers/daily_habits_provider.dart';
+import '../widgets/habit_color.dart';
 
 /// Stitch Screen: Add Habit
 /// Screen ID: c5d28de911dd4f468537b18705902a8f
-class AddHabitPage extends StatefulWidget {
+class AddHabitPage extends ConsumerStatefulWidget {
   const AddHabitPage({super.key});
 
   @override
-  State<AddHabitPage> createState() => _AddHabitPageState();
+  ConsumerState<AddHabitPage> createState() => _AddHabitPageState();
 }
 
-class _AddHabitPageState extends State<AddHabitPage> {
+class _AddHabitPageState extends ConsumerState<AddHabitPage> {
   String _selectedSeed = 'Drink water';
   final TextEditingController _customHabitController = TextEditingController();
-  final TextEditingController _goalController = TextEditingController();
 
-  String _selectedFrequency = 'Every day';
-  TimeOfDay _reminderTime = const TimeOfDay(hour: 8, minute: 0);
+  String _selectedColor = HabitColors.palette.first;
+  bool _isSubmitting = false;
 
   final List<({String label, IconData icon})> _seedOptions = [
     (label: 'Drink water', icon: Icons.water_drop_rounded),
@@ -30,65 +32,49 @@ class _AddHabitPageState extends State<AddHabitPage> {
     (label: 'Custom', icon: Icons.edit_rounded),
   ];
 
-  final List<String> _frequencyOptions = [
-    'Every day',
-    'Weekdays',
-    'Specific days',
-  ];
-
   @override
   void dispose() {
     _customHabitController.dispose();
-    _goalController.dispose();
     super.dispose();
   }
 
-  Future<void> _selectTime() async {
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: _reminderTime,
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: AppColors.primary,
-              onPrimary: AppColors.onPrimary,
-              surface: AppColors.surfaceContainerLow,
-              onSurface: AppColors.onSurface,
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-    if (picked != null) {
-      setState(() {
-        _reminderTime = picked;
-      });
-    }
-  }
-
-  void _onConfirm() {
+  Future<void> _onConfirm() async {
     final habitName = _selectedSeed == 'Custom'
         ? _customHabitController.text.trim()
         : _selectedSeed;
 
     if (habitName.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a habit name')),
-      );
+      _showMessage('Please enter a habit name', AppColors.error);
       return;
     }
 
+    setState(() => _isSubmitting = true);
+
+    final failure = await ref
+        .read(dailyHabitsProvider.notifier)
+        .create(name: habitName, color: _selectedColor);
+
+    if (!mounted) return;
+    setState(() => _isSubmitting = false);
+
+    if (failure != null) {
+      // Keep the form open so the user does not lose what they typed.
+      _showMessage(failure.message, AppColors.error);
+      return;
+    }
+
+    _showMessage('Planted habit "$habitName"!', AppColors.primary);
+    context.pop();
+  }
+
+  void _showMessage(String message, Color background) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Planted habit "$habitName"!'),
-        backgroundColor: AppColors.primary,
+        content: Text(message),
+        backgroundColor: background,
         behavior: SnackBarBehavior.floating,
       ),
     );
-
-    context.pop();
   }
 
   @override
@@ -233,44 +219,9 @@ class _AddHabitPageState extends State<AddHabitPage> {
                     ),
                     const SizedBox(height: AppSpacing.sectionGap),
 
-                    // 2. Daily Goal
+                    // 2. Colour — the only other field the schema stores
                     Text(
-                      'DAILY GOAL',
-                      style: AppTypography.labelMedium.copyWith(
-                        color: AppColors.onSurfaceVariant,
-                        letterSpacing: 1.2,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: _goalController,
-                      decoration: InputDecoration(
-                        prefixIcon: const Icon(
-                          Icons.track_changes_rounded,
-                          color: AppColors.onSurfaceVariant,
-                        ),
-                        hintText: 'e.g., 2 Liters, 10 minutes...',
-                        hintStyle: AppTypography.bodyMedium.copyWith(
-                          color: AppColors.onSurfaceVariant.withValues(alpha: 0.5),
-                        ),
-                        filled: true,
-                        fillColor: AppColors.surfaceContainerLow,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 16,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: AppSpacing.borderRadiusPill,
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.sectionGap),
-
-                    // 3. Rhythm (Frequency)
-                    Text(
-                      'RHYTHM',
+                      'COLOUR',
                       style: AppTypography.labelMedium.copyWith(
                         color: AppColors.onSurfaceVariant,
                         letterSpacing: 1.2,
@@ -279,86 +230,32 @@ class _AddHabitPageState extends State<AddHabitPage> {
                     ),
                     const SizedBox(height: 12),
                     Wrap(
-                      spacing: 10,
-                      runSpacing: 10,
-                      children: _frequencyOptions.map((freq) {
-                        final isSelected = _selectedFrequency == freq;
-                        return ChoiceChip(
-                          selected: isSelected,
-                          onSelected: (selected) {
-                            if (selected) {
-                              setState(() {
-                                _selectedFrequency = freq;
-                              });
-                            }
-                          },
-                          label: Text(
-                            freq,
-                            style: AppTypography.labelMedium.copyWith(
-                              color: isSelected
-                                  ? AppColors.onPrimary
-                                  : AppColors.onSurface,
-                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                            ),
-                          ),
-                          backgroundColor: AppColors.surfaceContainer,
-                          selectedColor: AppColors.primary,
-                          side: BorderSide.none,
-                          shape: const StadiumBorder(),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 10,
-                          ),
-                          showCheckmark: false,
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: AppSpacing.sectionGap),
-
-                    // 4. Gentle Nudge (Reminder)
-                    Text(
-                      'GENTLE NUDGE',
-                      style: AppTypography.labelMedium.copyWith(
-                        color: AppColors.onSurfaceVariant,
-                        letterSpacing: 1.2,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    InkWell(
-                      onTap: _selectTime,
-                      borderRadius: AppSpacing.borderRadiusPill,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 16,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceContainerLow,
-                          borderRadius: AppSpacing.borderRadiusPill,
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.notifications_none_rounded,
-                              color: AppColors.onSurfaceVariant,
-                            ),
-                            const SizedBox(width: 14),
-                            Text(
-                              _reminderTime.format(context),
-                              style: AppTypography.bodyLarge.copyWith(
-                                color: AppColors.onSurface,
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: [
+                        for (final hex in HabitColors.palette)
+                          InkWell(
+                            key: ValueKey('habit-color-$hex'),
+                            onTap: () => setState(() => _selectedColor = hex),
+                            customBorder: const CircleBorder(),
+                            child: Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: HabitColors.parse(hex),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: hex == _selectedColor
+                                      ? AppColors.onSurface
+                                      : Colors.transparent,
+                                  width: 3,
+                                ),
                               ),
                             ),
-                            const Spacer(),
-                            const Icon(
-                              Icons.keyboard_arrow_down_rounded,
-                              color: AppColors.onSurfaceVariant,
-                            ),
-                          ],
-                        ),
-                      ),
+                          ),
+                      ],
                     ),
+                    const SizedBox(height: 28),
                     const SizedBox(height: 40),
                   ],
                 ),
@@ -391,7 +288,7 @@ class _AddHabitPageState extends State<AddHabitPage> {
                     elevation: 0,
                     shape: const StadiumBorder(),
                   ),
-                  onPressed: _onConfirm,
+                  onPressed: _isSubmitting ? null : _onConfirm,
                   icon: const Icon(Icons.check_rounded, size: 20),
                   label: Text(
                     'Confirm',

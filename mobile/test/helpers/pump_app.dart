@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // Riverpod 3 moved `Override` out of the main barrel.
 import 'package:flutter_riverpod/misc.dart';
@@ -25,6 +26,41 @@ Future<void> pumpApp(
     ProviderScope(
       overrides: overrides,
       child: MaterialApp(theme: AppTheme.lightTheme, home: widget),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
+/// Mounts [widget] as the only route of a real [GoRouter].
+///
+/// Pages that call `context.pop()` or `context.pushNamed(...)` need a router in
+/// the tree; [pumpApp] builds a plain `MaterialApp`, which has none.
+Future<void> pumpRoutedApp(
+  WidgetTester tester,
+  Widget widget, {
+  List<Override> overrides = const [],
+}) async {
+  final router = GoRouter(
+    routes: [
+      GoRoute(
+        path: '/',
+        builder: (context, state) => const SizedBox.shrink(),
+        routes: [
+          GoRoute(path: 'page', builder: (context, state) => widget),
+        ],
+      ),
+    ],
+    initialLocation: '/page',
+  );
+  addTearDown(router.dispose);
+
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: overrides,
+      child: MaterialApp.router(
+        theme: AppTheme.lightTheme,
+        routerConfig: router,
+      ),
     ),
   );
   await tester.pumpAndSettle();
