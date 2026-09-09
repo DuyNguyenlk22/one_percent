@@ -56,7 +56,7 @@ export class AuthService {
       },
     });
 
-    const accessToken = await this.jwtService.signAsync({ id: user.id });
+    const accessToken = await this.jwtService.signAsync({ userId: user.id });
 
     return {
       user: omit(user, ['passwordHash']),
