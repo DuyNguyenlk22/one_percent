@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile/app/theme/theme.dart';
+import 'package:mobile/core/errors/result.dart';
 import 'package:mobile/features/auth/domain/entities/user.dart';
 import 'package:mobile/features/auth/domain/repositories/auth_repository.dart';
 import 'package:mobile/injection/dependency_injection.dart';
@@ -75,6 +76,24 @@ MockAuthRepository buildSignedOutRepository() {
   when(() => repository.authStateChanges).thenAnswer((_) => const Stream<User?>.empty());
   return repository;
 }
+
+/// A repository mock that reports a live session for [user].
+///
+/// `AuthNotifier.restoreSession` asks `hasSession()` and then reads the profile,
+/// so both have to answer for the page to see a signed-in user.
+MockAuthRepository buildSignedInRepository(User user) {
+  final repository = MockAuthRepository();
+  when(repository.hasSession).thenAnswer((_) async => true);
+  when(repository.getCurrentUser).thenAnswer((_) async => Success(user));
+  when(() => repository.authStateChanges)
+      .thenAnswer((_) => Stream<User?>.value(user));
+  return repository;
+}
+
+/// The override list a signed-in widget test needs.
+List<Override> signedInOverrides(User user) => [
+      authRepositoryProvider.overrideWithValue(buildSignedInRepository(user)),
+    ];
 
 /// The override list a widget test normally needs.
 List<Override> signedOutOverrides([AuthRepository? repository]) => [

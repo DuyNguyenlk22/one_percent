@@ -4,7 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_typography.dart';
+import '../../../../core/utils/date_utils.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../insights/domain/entities/insights_summary.dart';
+import '../../../insights/presentation/providers/insights_provider.dart';
 
 /// Stitch Screen: Profile
 /// Screen ID: 4c5eb381a47e47e99186f7dc53ec7a71
@@ -70,6 +73,11 @@ class ProfilePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authNotifierProvider).user;
+    // Zeroes while loading rather than a spinner: the stat row is a summary on
+    // a page whose real purpose is settings and sign-out, and swapping it for
+    // a spinner makes the whole page feel like it is loading.
+    final summary =
+        ref.watch(insightsProvider).value ?? InsightsSummary.empty;
     final userName = user?.email.split('@').first ?? 'Sarah Jenkins';
     final capitalizedName = userName.isNotEmpty
         ? '${userName[0].toUpperCase()}${userName.substring(1)}'
@@ -153,7 +161,7 @@ class ProfilePage extends ConsumerWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                'Growing since Oct 2022',
+                _growingSince(user?.createdAt),
                 style: AppTypography.bodyMedium.copyWith(
                   color: AppColors.onSurfaceVariant,
                 ),
@@ -172,7 +180,7 @@ class ProfilePage extends ConsumerWidget {
                   children: [
                     Expanded(
                       child: _StatColumn(
-                        value: '88%',
+                        value: '${summary.consistencyPercent}%',
                         label: 'CONSISTENCY',
                       ),
                     ),
@@ -183,7 +191,7 @@ class ProfilePage extends ConsumerWidget {
                     ),
                     Expanded(
                       child: _StatColumn(
-                        value: '14',
+                        value: '${summary.habitCount}',
                         label: 'HABITS',
                       ),
                     ),
@@ -194,7 +202,7 @@ class ProfilePage extends ConsumerWidget {
                     ),
                     Expanded(
                       child: _StatColumn(
-                        value: '28',
+                        value: '${summary.currentStreak}',
                         label: 'STREAK',
                       ),
                     ),
@@ -296,6 +304,13 @@ class ProfilePage extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// The month the account was created. Falls back to a neutral line rather than
+/// inventing a date when the profile has not loaded.
+String _growingSince(DateTime? createdAt) {
+  if (createdAt == null) return 'Welcome to Bloom';
+  return 'Growing since ${AppDateUtils.monthLabel(createdAt)} ${createdAt.year}';
 }
 
 class _StatColumn extends StatelessWidget {
