@@ -31,6 +31,18 @@ import '../features/auth/domain/usecases/get_current_user.dart';
 import '../features/auth/domain/usecases/login.dart';
 import '../features/auth/domain/usecases/logout.dart';
 import '../features/auth/domain/usecases/register.dart';
+import '../features/entries/data/datasources/entry_remote_datasource.dart';
+import '../features/entries/data/repositories/entry_repository_impl.dart';
+import '../features/entries/domain/repositories/entry_repository.dart';
+import '../features/entries/domain/usecases/get_entries.dart';
+import '../features/entries/domain/usecases/set_entry.dart';
+import '../features/habits/data/datasources/habit_remote_datasource.dart';
+import '../features/habits/data/repositories/habit_repository_impl.dart';
+import '../features/habits/domain/repositories/habit_repository.dart';
+import '../features/habits/domain/usecases/create_habit.dart';
+import '../features/habits/domain/usecases/delete_habit.dart';
+import '../features/habits/domain/usecases/get_daily_habits.dart';
+import '../features/habits/domain/usecases/update_habit.dart';
 
 
 // ---------------------------------------------------------------------------
@@ -57,11 +69,33 @@ final secureStorageProvider = Provider<SecureStorage>((ref) => SecureStorage());
 
 final networkInfoProvider = Provider<NetworkInfo>((ref) => const NetworkInfoImpl());
 
+/// Counts the times the backend has rejected the bearer token.
+///
+/// A counter rather than a flag: two 401s in a row must both be observable,
+/// and a counter is the simplest value that changes every time. `AuthNotifier`
+/// listens and flips to unauthenticated, which the router picks up.
+class SessionExpiryNotifier extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  /// Called by [AuthInterceptor] once it has cleared the rejected token.
+  void expire() => state = state + 1;
+}
+
+final sessionExpiredProvider =
+    NotifierProvider<SessionExpiryNotifier, int>(SessionExpiryNotifier.new);
+
 /// The configured HTTP client, with the auth interceptor already attached.
 final apiClientProvider = Provider<ApiClient>((ref) {
   return ApiClient(
     interceptors: [
-      AuthInterceptor(secureStorage: ref.watch(secureStorageProvider)),
+      AuthInterceptor(
+        secureStorage: ref.watch(secureStorageProvider),
+        // Closes the loop the interceptor cannot close on its own: it clears
+        // the token, this tells the router.
+        onUnauthorized: () =>
+            ref.read(sessionExpiredProvider.notifier).expire(),
+      ),
     ],
   );
 });
@@ -105,4 +139,58 @@ final logoutUseCaseProvider = Provider<Logout>(
 
 final getCurrentUserUseCaseProvider = Provider<GetCurrentUser>(
   (ref) => GetCurrentUser(ref.watch(authRepositoryProvider)),
+);
+
+// ---------------------------------------------------------------------------
+// Feature: habits
+// ---------------------------------------------------------------------------
+
+final habitRemoteDataSourceProvider = Provider<HabitRemoteDataSource>(
+  (ref) => HabitRemoteDataSourceImpl(ref.watch(apiClientProvider)),
+);
+
+final habitRepositoryProvider = Provider<HabitRepository>(
+  (ref) => HabitRepositoryImpl(
+    remoteDataSource: ref.watch(habitRemoteDataSourceProvider),
+    networkInfo: ref.watch(networkInfoProvider),
+  ),
+);
+
+final getDailyHabitsUseCaseProvider = Provider<GetDailyHabits>(
+  (ref) => GetDailyHabits(ref.watch(habitRepositoryProvider)),
+);
+
+final createHabitUseCaseProvider = Provider<CreateHabit>(
+  (ref) => CreateHabit(ref.watch(habitRepositoryProvider)),
+);
+
+final updateHabitUseCaseProvider = Provider<UpdateHabit>(
+  (ref) => UpdateHabit(ref.watch(habitRepositoryProvider)),
+);
+
+final deleteHabitUseCaseProvider = Provider<DeleteHabit>(
+  (ref) => DeleteHabit(ref.watch(habitRepositoryProvider)),
+);
+
+// ---------------------------------------------------------------------------
+// Feature: entries
+// ---------------------------------------------------------------------------
+
+final entryRemoteDataSourceProvider = Provider<EntryRemoteDataSource>(
+  (ref) => EntryRemoteDataSourceImpl(ref.watch(apiClientProvider)),
+);
+
+final entryRepositoryProvider = Provider<EntryRepository>(
+  (ref) => EntryRepositoryImpl(
+    remoteDataSource: ref.watch(entryRemoteDataSourceProvider),
+    networkInfo: ref.watch(networkInfoProvider),
+  ),
+);
+
+final setEntryUseCaseProvider = Provider<SetEntry>(
+  (ref) => SetEntry(ref.watch(entryRepositoryProvider)),
+);
+
+final getEntriesUseCaseProvider = Provider<GetEntries>(
+  (ref) => GetEntries(ref.watch(entryRepositoryProvider)),
 );
