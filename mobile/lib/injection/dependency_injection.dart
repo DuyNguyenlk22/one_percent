@@ -172,6 +172,21 @@ final deleteHabitUseCaseProvider = Provider<DeleteHabit>(
   (ref) => DeleteHabit(ref.watch(habitRepositoryProvider)),
 );
 
+/// Bumped whenever a habit or check-off changes.
+///
+/// Insights watches this rather than `dailyHabitsProvider` directly: watching
+/// an AsyncValue rebuilds on every loading/data transition, which would run
+/// the whole N+1 entry fetch twice for a single load.
+class HabitsRevisionNotifier extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void bump() => state = state + 1;
+}
+
+final habitsRevisionProvider =
+    NotifierProvider<HabitsRevisionNotifier, int>(HabitsRevisionNotifier.new);
+
 // ---------------------------------------------------------------------------
 // Feature: entries
 // ---------------------------------------------------------------------------

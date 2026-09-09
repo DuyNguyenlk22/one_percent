@@ -72,6 +72,7 @@ class DailyHabitsNotifier extends AsyncNotifier<List<DailyHabit>> {
       state = AsyncValue.data(_replace(current, habitId, habit));
       return failure;
     }
+    _markChanged();
     return null;
   }
 
@@ -82,6 +83,7 @@ class DailyHabitsNotifier extends AsyncNotifier<List<DailyHabit>> {
     if (result case ResultError(:final failure)) return failure;
 
     await refresh();
+    _markChanged();
     return null;
   }
 
@@ -107,6 +109,7 @@ class DailyHabitsNotifier extends AsyncNotifier<List<DailyHabit>> {
       state = AsyncValue.data(current);
       return failure;
     }
+    _markChanged();
     return null;
   }
 
@@ -123,6 +126,7 @@ class DailyHabitsNotifier extends AsyncNotifier<List<DailyHabit>> {
       state = AsyncValue.data(current);
       return failure;
     }
+    _markChanged();
     return null;
   }
 
@@ -137,8 +141,13 @@ class DailyHabitsNotifier extends AsyncNotifier<List<DailyHabit>> {
     if (result case ResultError(:final failure)) return failure;
 
     await refresh();
+    _markChanged();
     return null;
   }
+
+  /// Tells Insights its history is stale. Only called after a write actually
+  /// landed, so a failed mutation does not trigger a needless refetch.
+  void _markChanged() => ref.read(habitsRevisionProvider.notifier).bump();
 
   List<DailyHabit> _replace(
     List<DailyHabit> list,
