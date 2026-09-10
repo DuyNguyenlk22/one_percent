@@ -19,6 +19,7 @@ model User {
  passwordHash String
  createdAt DateTime @default(now())
  habits Habit[]
+ passwordResetCodes PasswordResetCode[]
  @@map("users")
 }
 model Habit {
@@ -40,4 +41,19 @@ model HabitEntry {
  habit Habit @relation(fields: [habitId], references: [id], onDelete: Cascade)
  @@unique([habitId, date])
  @@map("habit_entries")
+}
+
+model PasswordResetCode {
+  id String @id @default(uuid())
+  userId String
+  codeHash String
+  expiresAt DateTime
+  attempts Int @default(0)
+  verifiedAt DateTime?
+  consumedAt DateTime?
+  createdAt DateTime @default(now())
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("password_reset_codes")
 }

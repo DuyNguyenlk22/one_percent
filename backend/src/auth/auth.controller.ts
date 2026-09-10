@@ -14,6 +14,7 @@ import { JwtAuthGuard } from './jwt-auth.guard';
 import { ApiBearerAuth, ApiCreatedResponse, ApiTags } from '@nestjs/swagger';
 import { AuthResponse } from './types/auth.types';
 import { CurrentUser } from 'src/common/decorators';
+import { ForgotPasswordAuthDto } from './dto/forgot-password-auth.dto';
 
 @Controller('auth')
 @ApiTags('Auth')
@@ -30,6 +31,12 @@ export class AuthController {
   @ApiCreatedResponse({ type: AuthResponse })
   async register(@Body() body: RegisterAuthDto) {
     return this.authService.register(body.email, body.password);
+  }
+
+  @Post('/forgot-password')
+  @ApiCreatedResponse({ type: AuthResponse })
+  forgotPassword(@Body() { email }: ForgotPasswordAuthDto) {
+    return `Forgot password functionality is not implemented yet. ${email}`;
   }
 
   @Get('/me')
