@@ -11,7 +11,7 @@ abstract final class ApiConstants {
   /// `flutter run --dart-define=API_BASE_URL=https://api.example.com`
   static const String _override = String.fromEnvironment('API_BASE_URL');
 
-  static const int _port = 3000;
+  static const int _port = 8080;
 
   /// Resolved base URL.
   ///
@@ -33,13 +33,19 @@ abstract final class ApiConstants {
   static const String register = '/auth/register';
   static const String me = '/auth/me';
 
+  // Password reset, in the order the user walks them.
+  static const String forgotPassword = '/auth/forgot-password';
+  static const String verifyResetCode = '/auth/verify-reset-code';
+  static const String resetPassword = '/auth/reset-password';
+
   // Habits — backend/src/habit/habit.controller.ts
   static const String habits = '/habits';
   static String habit(String id) => '/habits/$id';
 
   // Habit entries — backend/src/entries/entries.controller.ts
   static String entries(String habitId) => '/habits/$habitId/entries';
-  static String entry(String habitId, String date) => '/habits/$habitId/entries/$date';
+  static String entry(String habitId, String date) =>
+      '/habits/$habitId/entries/$date';
 
   // Headers
   static const String authorizationHeader = 'Authorization';

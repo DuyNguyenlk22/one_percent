@@ -104,6 +104,51 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<Result<void>> requestPasswordReset({required String email}) {
+    return _guard(() => _remote.requestPasswordReset(email: email));
+  }
+
+  @override
+  Future<Result<String>> verifyResetCode({
+    required String email,
+    required String code,
+  }) {
+    return _guard(() => _remote.verifyResetCode(email: email, code: code));
+  }
+
+  @override
+  Future<Result<void>> resetPassword({
+    required String resetToken,
+    required String newPassword,
+  }) {
+    // No session is cached here on purpose: the reset endpoint issues no access
+    // token, so the user signs in again through the normal login path.
+    return _guard(
+      () => _remote.resetPassword(
+        resetToken: resetToken,
+        newPassword: newPassword,
+      ),
+    );
+  }
+
+  /// Shared shape of the password reset calls: check connectivity, run the
+  /// request, turn any exception into a `Failure`. None of them touch the
+  /// cached session, which is what separates them from [_authenticate].
+  Future<Result<T>> _guard<T>(Future<T> Function() call) async {
+    if (!await _networkInfo.isConnected) {
+      return const ResultError(NetworkFailure());
+    }
+    try {
+      return Success(await call());
+    } on AppException catch (exception) {
+      return ResultError(_toFailure(exception));
+    } on Object catch (error, stackTrace) {
+      Logger.error('Password reset step failed', error: error, stackTrace: stackTrace);
+      return const ResultError(UnexpectedFailure());
+    }
+  }
+
+  @override
   Future<bool> hasSession() => _local.hasSession();
 
   /// Releases the broadcast controller. Called by the DI layer on dispose.

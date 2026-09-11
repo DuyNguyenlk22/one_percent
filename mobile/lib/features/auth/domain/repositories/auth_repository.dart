@@ -19,6 +19,30 @@ abstract interface class AuthRepository {
   /// The signed-in user, or a failure when the session is missing or expired.
   Future<Result<User>> getCurrentUser();
 
+  /// Asks the backend to email a reset code.
+  ///
+  /// Succeeds for an unregistered address too — the backend refuses to reveal
+  /// which addresses have accounts, and the app must not imply otherwise.
+  Future<Result<void>> requestPasswordReset({required String email});
+
+  /// Trades the emailed code for a short-lived reset token.
+  ///
+  /// Every rejection — wrong, expired, or too many attempts — comes back as the
+  /// same failure, because the backend deliberately does not distinguish them.
+  Future<Result<String>> verifyResetCode({
+    required String email,
+    required String code,
+  });
+
+  /// Sets a new password using the token from [verifyResetCode].
+  ///
+  /// Does not sign the user in: they return to login and use the new password,
+  /// which keeps a single sign-in path.
+  Future<Result<void>> resetPassword({
+    required String resetToken,
+    required String newPassword,
+  });
+
   /// Whether a token is stored locally.
   ///
   /// A cheap check for the router's initial redirect — it does not prove the

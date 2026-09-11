@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/auth/presentation/pages/forgot_password_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
+import '../../features/auth/presentation/pages/reset_password_page.dart';
 import '../../features/auth/presentation/providers/auth_provider.dart';
 import '../../features/onboarding/presentation/pages/welcome_page.dart';
 import '../shell/main_shell_scaffold.dart';
@@ -84,6 +85,21 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: RouteNames.forgotPasswordPath,
         name: RouteNames.forgotPassword,
         builder: (context, state) => ForgotPasswordPage(
+          email: state.uri.queryParameters['email'] ?? '',
+        ),
+      ),
+      GoRoute(
+        path: RouteNames.resetPasswordPath,
+        name: RouteNames.resetPassword,
+        // The token arrives from the verify step. Landing here without one is a
+        // deep link or a stale tab, and the page has no way to authorise the
+        // change, so send the user back to start the flow again.
+        redirect: (context, state) =>
+            (state.uri.queryParameters['token'] ?? '').isEmpty
+                ? RouteNames.forgotPasswordPath
+                : null,
+        builder: (context, state) => ResetPasswordPage(
+          resetToken: state.uri.queryParameters['token'] ?? '',
           email: state.uri.queryParameters['email'] ?? '',
         ),
       ),

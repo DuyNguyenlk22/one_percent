@@ -30,6 +30,21 @@ abstract final class Validators {
     return null;
   }
 
+  /// Requires exactly [AppConstants.resetCodeLength] digits.
+  ///
+  /// Mirrors the `@Matches(/^\d{6}$/)` rule on the backend's
+  /// `VerifyResetCodeDto`, so an obviously wrong code never costs the user one
+  /// of their five attempts.
+  static String? resetCode(String? value) {
+    final code = value?.trim() ?? '';
+    if (code.isEmpty) return 'Enter the code we emailed you';
+    if (code.length != AppConstants.resetCodeLength ||
+        !RegExp(r'^\d+$').hasMatch(code)) {
+      return 'Enter all ${AppConstants.resetCodeLength} digits of the code';
+    }
+    return null;
+  }
+
   /// Requires [value] to match [original].
   static String? confirmPassword(String? value, String original) {
     if (value == null || value.isEmpty) return 'Please confirm your password';

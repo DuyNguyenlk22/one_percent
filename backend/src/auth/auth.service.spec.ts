@@ -1,7 +1,9 @@
 import { Test } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { PrismaService } from 'src/prisma.service';
+import { EmailService } from 'src/email/email.service';
 
 describe('AuthService token claims', () => {
   const user = {
@@ -32,6 +34,11 @@ describe('AuthService token claims', () => {
         AuthService,
         { provide: PrismaService, useValue: prisma },
         { provide: JwtService, useValue: jwt },
+        { provide: ConfigService, useValue: { get: jest.fn() } },
+        {
+          provide: EmailService,
+          useValue: { sendPasswordResetCode: jest.fn() },
+        },
       ],
     }).compile();
 

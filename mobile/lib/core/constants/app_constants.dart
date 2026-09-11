@@ -13,6 +13,16 @@ abstract final class AppConstants {
   static const int minPasswordLength = 6;
   static const int maxHabitNameLength = 60;
 
+  /// Digits in an emailed password reset code.
+  ///
+  /// The OTP boxes are generated from this one value, so it is the only place
+  /// to change if the backend ever widens the code again.
+  static const int resetCodeLength = 6;
+
+  /// How long the backend makes a user wait before resending a reset code.
+  /// Mirrors `RESEND_COOLDOWN_MS` in `backend/src/auth/auth.service.ts`.
+  static const Duration resendCooldown = Duration(seconds: 60);
+
   /// Standard animation durations.
   static const Duration shortAnimation = Duration(milliseconds: 200);
   static const Duration mediumAnimation = Duration(milliseconds: 400);

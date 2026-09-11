@@ -17,6 +17,26 @@ abstract interface class AuthRemoteDataSource {
 
   /// `GET /auth/me`, requires the bearer token.
   Future<UserModel> getCurrentUser();
+
+  /// `POST /auth/forgot-password` — asks the backend to email a reset code.
+  ///
+  /// Succeeds whether or not the address is registered: the backend answers
+  /// identically either way so the response cannot be used to discover who has
+  /// an account.
+  Future<void> requestPasswordReset({required String email});
+
+  /// `POST /auth/verify-reset-code` — trades the emailed code for a
+  /// short-lived reset token.
+  Future<String> verifyResetCode({required String email, required String code});
+
+  /// `POST /auth/reset-password` — sets the new password.
+  ///
+  /// Returns nothing: the backend issues no access token here by design, so the
+  /// user signs in again afterwards.
+  Future<void> resetPassword({
+    required String resetToken,
+    required String newPassword,
+  });
 }
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
@@ -49,5 +69,41 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   Future<UserModel> getCurrentUser() async {
     final json = await _client.get<Map<String, dynamic>>(ApiConstants.me);
     return UserModel.fromJson(json);
+  }
+
+  @override
+  Future<void> requestPasswordReset({required String email}) async {
+    await _client.post<Map<String, dynamic>>(
+      ApiConstants.forgotPassword,
+      data: {'email': email},
+    );
+  }
+
+  @override
+  Future<String> verifyResetCode({
+    required String email,
+    required String code,
+  }) async {
+    final json = await _client.post<Map<String, dynamic>>(
+      ApiConstants.verifyResetCode,
+      data: {'email': email, 'code': code},
+    );
+
+    final token = json['resetToken'];
+    if (token is! String || token.isEmpty) {
+      throw const ServerException('The server did not return a reset token.');
+    }
+    return token;
+  }
+
+  @override
+  Future<void> resetPassword({
+    required String resetToken,
+    required String newPassword,
+  }) async {
+    await _client.post<Map<String, dynamic>>(
+      ApiConstants.resetPassword,
+      data: {'resetToken': resetToken, 'newPassword': newPassword},
+    );
   }
 }

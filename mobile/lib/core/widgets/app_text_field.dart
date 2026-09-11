@@ -33,6 +33,10 @@ class AppTextField extends StatefulWidget {
   });
 
   /// Factory constructor for single-digit OTP input boxes (used on Forgot Password / Verification screens).
+  ///
+  /// [size] is overridable because a row of six boxes does not fit at the
+  /// 64px default on a phone — the caller measures the space it has and passes
+  /// what fits.
   factory AppTextField.otp({
     Key? key,
     required TextEditingController controller,
@@ -40,6 +44,7 @@ class AppTextField extends StatefulWidget {
     required ValueChanged<String> onChanged,
     void Function(RawKeyEvent)? onKey,
     bool autofocus = false,
+    double size = 64,
   }) {
     return AppTextField(
       key: key,
@@ -52,8 +57,8 @@ class AppTextField extends StatefulWidget {
       keyboardType: TextInputType.number,
       textAlign: TextAlign.center,
       maxLength: 1,
-      width: 64,
-      height: 64,
+      width: size,
+      height: size,
     );
   }
 

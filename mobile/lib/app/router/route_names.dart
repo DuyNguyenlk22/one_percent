@@ -17,6 +17,9 @@ abstract final class RouteNames {
   static const String forgotPassword = 'forgot-password';
   static const String forgotPasswordPath = '/forgot-password';
 
+  static const String resetPassword = 'reset-password';
+  static const String resetPasswordPath = '/reset-password';
+
   // Main shell
   static const String today = 'today';
   static const String todayPath = '/today';
@@ -46,5 +49,6 @@ abstract final class RouteNames {
     loginPath,
     registerPath,
     forgotPasswordPath,
+    resetPasswordPath,
   };
 }

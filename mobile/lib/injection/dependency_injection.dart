@@ -31,6 +31,9 @@ import '../features/auth/domain/usecases/get_current_user.dart';
 import '../features/auth/domain/usecases/login.dart';
 import '../features/auth/domain/usecases/logout.dart';
 import '../features/auth/domain/usecases/register.dart';
+import '../features/auth/domain/usecases/request_password_reset.dart';
+import '../features/auth/domain/usecases/reset_password.dart';
+import '../features/auth/domain/usecases/verify_reset_code.dart';
 import '../features/entries/data/datasources/entry_remote_datasource.dart';
 import '../features/entries/data/repositories/entry_repository_impl.dart';
 import '../features/entries/domain/repositories/entry_repository.dart';
@@ -139,6 +142,18 @@ final logoutUseCaseProvider = Provider<Logout>(
 
 final getCurrentUserUseCaseProvider = Provider<GetCurrentUser>(
   (ref) => GetCurrentUser(ref.watch(authRepositoryProvider)),
+);
+
+final requestPasswordResetUseCaseProvider = Provider<RequestPasswordReset>(
+  (ref) => RequestPasswordReset(ref.watch(authRepositoryProvider)),
+);
+
+final verifyResetCodeUseCaseProvider = Provider<VerifyResetCode>(
+  (ref) => VerifyResetCode(ref.watch(authRepositoryProvider)),
+);
+
+final resetPasswordUseCaseProvider = Provider<ResetPassword>(
+  (ref) => ResetPassword(ref.watch(authRepositoryProvider)),
 );
 
 // ---------------------------------------------------------------------------

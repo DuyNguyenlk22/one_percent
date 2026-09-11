@@ -94,7 +94,7 @@ class _WelcomePageState extends ConsumerState<WelcomePage>
     // The session is still being restored: the ways in are not answerable yet.
     final isRestoring =
         ref.watch(authNotifierProvider.select((state) => state.status)) ==
-            AuthStatus.unknown;
+        AuthStatus.unknown;
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -179,7 +179,7 @@ class _WelcomeHeader extends StatelessWidget {
           ),
         ),
         Text(
-          'Est. 2024',
+          'Est. 2026',
           style: AppTypography.labelMedium.copyWith(color: AppColors.outline),
         ),
       ],
@@ -209,7 +209,11 @@ class _BrandMark extends StatelessWidget {
             AppAssets.bloomLogo,
             fit: BoxFit.contain,
             errorBuilder: (context, error, stackTrace) => const Center(
-              child: Icon(Icons.spa_rounded, size: 44, color: AppColors.primary),
+              child: Icon(
+                Icons.spa_rounded,
+                size: 44,
+                color: AppColors.primary,
+              ),
             ),
           ),
         ),
@@ -221,7 +225,9 @@ class _BrandMark extends StatelessWidget {
         const SizedBox(height: 12),
         Text.rich(
           TextSpan(
-            text: 'Small habits, remarkable compounding. Grow ',
+            // Hard break so the promise starts its own line instead of
+            // wrapping mid-sentence at whatever width the screen happens to be.
+            text: 'Small habits, remarkable compounding.\nGrow ',
             style: AppTypography.bodyMedium.copyWith(
               color: AppColors.onSurfaceVariant,
             ),
@@ -343,13 +349,13 @@ class _PillarDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => const Padding(
-        padding: EdgeInsets.symmetric(vertical: 10),
-        child: Divider(
-          height: 1,
-          thickness: 1,
-          color: AppColors.surfaceContainerHigh,
-        ),
-      );
+    padding: EdgeInsets.symmetric(vertical: 10),
+    child: Divider(
+      height: 1,
+      thickness: 1,
+      color: AppColors.surfaceContainerHigh,
+    ),
+  );
 }
 
 /// The two ways in, plus the progress dots.

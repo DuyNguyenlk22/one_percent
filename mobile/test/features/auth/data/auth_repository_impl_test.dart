@@ -129,6 +129,114 @@ void main() {
     });
   });
 
+  group('requestPasswordReset', () {
+    test('succeeds when the backend accepts the address', () async {
+      when(() => remote.requestPasswordReset(email: any(named: 'email')))
+          .thenAnswer((_) async {});
+
+      final result = await repository.requestPasswordReset(email: user.email);
+
+      expect(result.isSuccess, isTrue);
+      verify(() => remote.requestPasswordReset(email: user.email)).called(1);
+    });
+
+    test('fails with NetworkFailure and never calls the API when offline', () async {
+      when(() => network.isConnected).thenAnswer((_) async => false);
+
+      final result = await repository.requestPasswordReset(email: user.email);
+
+      expect(result.failureOrNull, isA<NetworkFailure>());
+      verifyNever(() => remote.requestPasswordReset(email: any(named: 'email')));
+    });
+
+    test('surfaces the throttle message the backend sends', () async {
+      when(() => remote.requestPasswordReset(email: any(named: 'email'))).thenThrow(
+        const ServerException(
+          'Too many requests. Please try again in a minute.',
+          statusCode: 429,
+        ),
+      );
+
+      final failure = (await repository.requestPasswordReset(email: user.email)).failureOrNull;
+
+      expect(failure, isA<ServerFailure>());
+      expect(failure?.message, 'Too many requests. Please try again in a minute.');
+    });
+  });
+
+  group('verifyResetCode', () {
+    test('returns the reset token on success', () async {
+      when(() => remote.verifyResetCode(
+            email: any(named: 'email'),
+            code: any(named: 'code'),
+          )).thenAnswer((_) async => 'reset-token');
+
+      final result = await repository.verifyResetCode(email: user.email, code: '481920');
+
+      expect(result.dataOrNull, 'reset-token');
+    });
+
+    test('maps a rejected code to ValidationFailure, message intact', () async {
+      when(() => remote.verifyResetCode(
+            email: any(named: 'email'),
+            code: any(named: 'code'),
+          )).thenThrow(const ValidationException('Invalid or expired code', statusCode: 400));
+
+      final failure =
+          (await repository.verifyResetCode(email: user.email, code: '000000')).failureOrNull;
+
+      expect(failure, isA<ValidationFailure>());
+      expect(failure?.message, 'Invalid or expired code');
+    });
+
+    test('fails with NetworkFailure when offline', () async {
+      when(() => network.isConnected).thenAnswer((_) async => false);
+
+      final result = await repository.verifyResetCode(email: user.email, code: '481920');
+
+      expect(result.failureOrNull, isA<NetworkFailure>());
+      verifyNever(
+        () => remote.verifyResetCode(email: any(named: 'email'), code: any(named: 'code')),
+      );
+    });
+  });
+
+  group('resetPassword', () {
+    test('succeeds without touching the cached session', () async {
+      when(() => remote.resetPassword(
+            resetToken: any(named: 'resetToken'),
+            newPassword: any(named: 'newPassword'),
+          )).thenAnswer((_) async {});
+
+      final result = await repository.resetPassword(
+        resetToken: 'reset-token',
+        newPassword: 'newsecret',
+      );
+
+      expect(result.isSuccess, isTrue);
+      // The backend deliberately issues no access token here — the user signs
+      // in again — so nothing may be cached.
+      verifyNever(
+        () => local.cacheSession(accessToken: any(named: 'accessToken'), user: any(named: 'user')),
+      );
+    });
+
+    test('maps a spent or forged token to AuthFailure', () async {
+      when(() => remote.resetPassword(
+            resetToken: any(named: 'resetToken'),
+            newPassword: any(named: 'newPassword'),
+          )).thenThrow(const UnauthorizedException('Invalid or expired reset token'));
+
+      final failure = (await repository.resetPassword(
+        resetToken: 'spent',
+        newPassword: 'newsecret',
+      ))
+          .failureOrNull;
+
+      expect(failure, const AuthFailure('Invalid or expired reset token'));
+    });
+  });
+
   group('getCurrentUser', () {
     test('refreshes the cached profile on success', () async {
       when(remote.getCurrentUser).thenAnswer((_) async => user);
